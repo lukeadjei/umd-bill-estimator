@@ -36,18 +36,18 @@ Work through this top to bottom before you write your first line of application 
 
 ## Phase 3: Repo & Environment Setup
 
-- [ ] Create GitHub repo — `umd-bill-estimator`, public
-- [ ] Add a README — keep it lean: problem statement, tech stack, how to run locally, "unofficial/unaffiliated" disclaimer
-- [ ] Add MIT license
-- [ ] Create a `docs/` folder with `RESEARCH.md`, `DECISIONS.md`, and `PLAN.md`
+- [x] Create GitHub repo — `umd-bill-estimator`, public
+- [x] Add a README — keep it lean: problem statement, tech stack, how to run locally, "unofficial/unaffiliated" disclaimer *(exists, currently a stub — flesh out before this is portfolio-ready)*
+- [x] Add MIT license
+- [ ] Create a `docs/` folder with `RESEARCH.md`, `DECISIONS.md`, and `PLAN.md` *(docs/ exists, but as differently-named files — CLAUDE.md references `docs/PLAN.md` and `docs/DECISIONS.md` which don't exist yet as literal files; the content currently lives inside this checklist's Decisions & Ideas Log instead. Worth reconciling — see note below.)*
 - [ ] Copy this checklist into `docs/PLAN.md` — make it one of your first commits, before any app code
-- [ ] Hold off on `.gitignore` until your stack is locked in — add it before your first `.env` file exists, not necessarily before your first commit
-- [ ] Turn on branch protection for `main` — require PRs before merging
+- [x] Hold off on `.gitignore` until your stack is locked in — add it before your first `.env` file exists, not necessarily before your first commit *(added 2026-08-23 alongside the Next.js scaffold)*
+- [x] Turn on branch protection for `main` — require PRs before merging
 - [ ] Set up a GitHub Projects board — Backlog / In Progress / Done
-- [ ] Scaffold Next.js + TypeScript + Tailwind
+- [x] Scaffold Next.js + TypeScript + Tailwind *(2026-08-23)*
 - [ ] Set up Supabase project + `.env.example`
-- [ ] Set up ESLint + Prettier
-- [ ] Set up GitHub Actions CI — lint + build on every PR
+- [ ] Set up ESLint + Prettier *(ESLint came with the Next.js scaffold; Prettier not yet added)*
+- [x] Set up GitHub Actions CI — lint + build on every PR *(2026-08-23, see `.github/workflows/ci.yml`)*
 - [ ] Connect Vercel for PR preview deployments
 
 ---
