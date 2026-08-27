@@ -45,7 +45,7 @@ Work through this top to bottom before you write your first line of application 
 - [x] Turn on branch protection for `main` — require PRs before merging
 - [ ] Set up a GitHub Projects board — Backlog / In Progress / Done
 - [x] Scaffold Next.js + TypeScript + Tailwind *(2026-08-23)*
-- [ ] Set up Supabase project + `.env.example`
+- [x] Set up Supabase project *(2026-08-24 — project created, CLI linked, full schema migrated: 11 reference tables + `scenarios`, RLS enabled — owner-only reads on `scenarios`, public reads on reference tables, all writes locked to the service role. `.env.example` deliberately not included — real var names/setup live in `docs/BUILD-REFERENCE.md` instead.)*
 - [ ] Set up ESLint + Prettier *(ESLint came with the Next.js scaffold; Prettier not yet added)*
 - [x] Set up GitHub Actions CI — lint + build on every PR *(2026-08-23, see `.github/workflows/ci.yml`)*
 - [ ] Connect Vercel for PR preview deployments
