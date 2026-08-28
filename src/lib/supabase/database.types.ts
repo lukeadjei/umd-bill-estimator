@@ -352,6 +352,7 @@ export type Database = {
           credit_hours: number
           housing_rate_id: string | null
           id: string
+          living_situation: string
           major: string | null
           name: string
           parking_permit_id: string | null
@@ -369,6 +370,7 @@ export type Database = {
           credit_hours: number
           housing_rate_id?: string | null
           id?: string
+          living_situation: string
           major?: string | null
           name: string
           parking_permit_id?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           credit_hours?: number
           housing_rate_id?: string | null
           id?: string
+          living_situation?: string
           major?: string | null
           name?: string
           parking_permit_id?: string | null

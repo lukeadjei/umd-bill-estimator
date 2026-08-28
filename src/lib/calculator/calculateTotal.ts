@@ -59,13 +59,14 @@ export function calculateFees(selections: Selections, rates: RatesBundle): numbe
 }
 
 // Eligibility (who's allowed to opt in) is validateSelections' job -- this just prices it if selected.
+// calculateTotal is one semester at a time, so this picks fall_price or spring_price -- never both.
 export function calculateInsurance(selections: Selections, rates: RatesBundle): number {
   if (!selections.insurance) return 0;
   const rate = findOrThrow(rates.healthInsuranceRates, () => true, "health insurance rate");
-  return rate.fall_price + rate.spring_price;
+  return selections.semester === "fall" ? rate.fall_price : rate.spring_price;
 }
 
-// Plain name-match lookup, no computation -- housing rate is already the full annual figure.
+// housing_rates.rate is the full ACADEMIC YEAR total -- half of it is one semester's share.
 export function calculateHousing(selections: Selections, rates: RatesBundle): number {
   if (!selections.housing) return 0;
   const { roomType, buildingCategory } = selections.housing;
@@ -74,11 +75,10 @@ export function calculateHousing(selections: Selections, rates: RatesBundle): nu
     (r) => r.room_type === roomType && r.building_category === buildingCategory,
     `housing rate (${roomType}, ${buildingCategory})`
   );
-  return rate.rate;
+  return rate.rate / 2;
 }
 
 // resident + block are mutually exclusive by construction (validateSelections enforces this, not here).
-// Resident plans are priced fall+spring separately; block plans are one flat price.
 export function calculateDining(selections: Selections, rates: RatesBundle): number {
   if (selections.residentDiningPlan) {
     const { planName } = selections.residentDiningPlan;
@@ -87,10 +87,13 @@ export function calculateDining(selections: Selections, rates: RatesBundle): num
       (r) => r.plan_name === planName,
       `resident dining plan (${planName})`
     );
-    return rate.fall_price + rate.spring_price;
+    // Resident plans price fall/spring separately -- pick this semester's price, don't sum both.
+    return selections.semester === "fall" ? rate.fall_price : rate.spring_price;
   }
 
   if (selections.blockDiningPlan) {
+    // block_dining_plans has one price column, no fall/spring split -- treated as
+    // already a per-semester figure (no term/annual dimension to it either way).
     const { planLabel } = selections.blockDiningPlan;
     const rate = findOrThrow(
       rates.blockDiningPlans,
@@ -103,7 +106,9 @@ export function calculateDining(selections: Selections, rates: RatesBundle): num
   return 0;
 }
 
-// Keyed on permit type AND term -- same permit costs different amounts annual vs fall-only vs spring-only.
+// Keyed on permit type AND term. Whatever term was picked (even "annual") gets
+// charged in full to whichever semester is being calculated -- UMD bills it that
+// way, no splitting, unlike housing.
 export function calculateParking(selections: Selections, rates: RatesBundle): number {
   if (!selections.parking) return 0;
   const { permitType, term } = selections.parking;
@@ -115,7 +120,9 @@ export function calculateParking(selections: Selections, rates: RatesBundle): nu
   return rate.price;
 }
 
-// The only function that adds it all up -- sole source of a final dollar total (CLAUDE.md rule 1).
+// One semester's total (fall or spring, per selections.semester) -- not the full year.
+// Sole source of a final dollar total (CLAUDE.md rule 1); summing two calls (fall + spring)
+// gets the annual figure, a separate concern for later.
 export function calculateTotal(selections: Selections, rates: RatesBundle): number {
   return (
     calculateTuition(selections, rates) +
