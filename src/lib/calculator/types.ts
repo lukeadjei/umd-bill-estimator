@@ -18,6 +18,8 @@ export type HealthInsuranceRateRow = Tables["health_insurance_rates"]["Row"];
 // (education level is which table you query, not a stored value).
 export type Residency = "resident" | "non_resident";
 export type EducationLevel = "undergraduate" | "graduate";
+// calculateTotal computes one semester's bill at a time, not a full-year total.
+export type Semester = "fall" | "spring";
 
 // These hold identifiers only (what the user picked), not resolved prices --
 // the calculator functions match them against RatesBundle to find the price.
@@ -40,6 +42,7 @@ export type ParkingSelection = {
 };
 
 export type Selections = {
+  semester: Semester;
   educationLevel: EducationLevel;
   residency: Residency;
   creditHours: number;

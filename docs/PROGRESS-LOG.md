@@ -4,6 +4,15 @@ Dated, append-only record of what actually got done, one entry per work session.
 
 ---
 
+### 2026-08-26
+
+- Built the calculation engine: `calculateTuition`, `calculateDifferentialTuition`, `calculateFees`, `calculateInsurance`, `calculateHousing`, `calculateDining`, `calculateParking`, composed by `calculateTotal` (`src/lib/calculator/calculateTotal.ts`). All pure — no DB calls — receive a full `RatesBundle` of already-fetched reference data plus the user's `Selections` and just do the math/branching.
+- Generated real TypeScript types from the live schema (`supabase gen types typescript --linked` → `src/lib/supabase/database.types.ts`) instead of hand-typing rate row shapes.
+- Follow-up migration (`20260827032535_add_credit_thresholds.sql`): added `undergrad_tuition_full_time_credit_threshold` and `full_time_fee_credit_threshold` to `academic_years` — these two thresholds (12 credits for tuition, 9 for fees, confirmed different from each other) were never actually stored anywhere before this, only ever described in prose. Will be scraped/populated like the rest of the rate data rather than hardcoded.
+- Corrected an assumption mid-build: graduate tuition has no full-time flat rate at all (always per-credit × credit hours) — confirmed this matches the original schema design, no migration needed there. Differential tuition for graduate students is assumed **not applicable** for now (unconfirmed, flagged in code with a comment) — grad tuition/fees otherwise mirror undergrad's shape with their own rate tables.
+- Added Vitest, 23 unit tests covering every branch of every calculation function (`src/lib/calculator/calculateTotal.test.ts`), and wired `npm run test` into `.github/workflows/ci.yml` between lint and build.
+- PR #5 merged to `main`. Verified a clean checkout of `main` passes `npm ci` + lint + test + build end to end.
+
 ### 2026-08-24
 
 - Created the Supabase project, installed/linked the Supabase CLI (pinned as a devDependency), wrote and pushed the first migration (`supabase/migrations/20260824043213_init_schema.sql`): all 11 reference tables + `scenarios`, RLS enabled on every table.

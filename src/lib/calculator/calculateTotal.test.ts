@@ -36,7 +36,7 @@ const rates: RatesBundle = {
     { id: "h1", academic_year_id: "year-1", room_type: "Double", building_category: "Traditional With AC", rate: 10290 },
   ],
   residentDiningPlans: [
-    { id: "rd1", academic_year_id: "year-1", plan_name: "Base", dining_dollars: 100, guest_passes: 5, fall_price: 2500, spring_price: 2500 },
+    { id: "rd1", academic_year_id: "year-1", plan_name: "Base", dining_dollars: 100, guest_passes: 5, fall_price: 2500, spring_price: 2600 },
   ],
   blockDiningPlans: [
     { id: "bd1", academic_year_id: "year-1", plan_label: "80 Block", meal_count: 80, dining_dollars: 50, price: 1200 },
@@ -46,7 +46,9 @@ const rates: RatesBundle = {
 };
 
 // A selections object with everything off/null, so each test only turns on what it's checking.
+// calculateTotal is one semester at a time -- fall is just the arbitrary default here.
 const baseSelections: Selections = {
+  semester: "fall",
   educationLevel: "undergraduate",
   residency: "resident",
   creditHours: 15,
@@ -121,8 +123,12 @@ describe("calculateInsurance", () => {
     expect(calculateInsurance(baseSelections, rates)).toBe(0);
   });
 
-  it("sums fall + spring when selected", () => {
-    expect(calculateInsurance({ ...baseSelections, insurance: true }, rates)).toBe(1232 + 1707);
+  it("charges only the fall price when selected for fall", () => {
+    expect(calculateInsurance({ ...baseSelections, semester: "fall", insurance: true }, rates)).toBe(1232);
+  });
+
+  it("charges only the spring price when selected for spring", () => {
+    expect(calculateInsurance({ ...baseSelections, semester: "spring", insurance: true }, rates)).toBe(1707);
   });
 });
 
@@ -131,12 +137,22 @@ describe("calculateHousing", () => {
     expect(calculateHousing(baseSelections, rates)).toBe(0);
   });
 
-  it("matches on room type + building category", () => {
+  it("charges half the annual rate for one semester", () => {
     const withHousing: Selections = {
       ...baseSelections,
       housing: { roomType: "Double", buildingCategory: "Traditional With AC" },
     };
-    expect(calculateHousing(withHousing, rates)).toBe(10290);
+    expect(calculateHousing(withHousing, rates)).toBe(10290 / 2);
+  });
+
+  it("charges the same half-rate regardless of which semester", () => {
+    const withHousing: Selections = {
+      ...baseSelections,
+      housing: { roomType: "Double", buildingCategory: "Traditional With AC" },
+    };
+    expect(calculateHousing({ ...withHousing, semester: "fall" }, rates)).toBe(
+      calculateHousing({ ...withHousing, semester: "spring" }, rates)
+    );
   });
 
   it("throws if the selection doesn't match any rate row", () => {
@@ -150,14 +166,20 @@ describe("calculateDining", () => {
     expect(calculateDining(baseSelections, rates)).toBe(0);
   });
 
-  it("sums fall + spring for a resident plan", () => {
-    const withPlan: Selections = { ...baseSelections, residentDiningPlan: { planName: "Base" } };
-    expect(calculateDining(withPlan, rates)).toBe(2500 + 2500);
+  it("charges only the fall price for a resident plan in fall", () => {
+    const withPlan: Selections = { ...baseSelections, semester: "fall", residentDiningPlan: { planName: "Base" } };
+    expect(calculateDining(withPlan, rates)).toBe(2500);
   });
 
-  it("returns the flat price for a block plan", () => {
+  it("charges only the spring price for a resident plan in spring", () => {
+    const withPlan: Selections = { ...baseSelections, semester: "spring", residentDiningPlan: { planName: "Base" } };
+    expect(calculateDining(withPlan, rates)).toBe(2600);
+  });
+
+  it("returns the flat price for a block plan regardless of semester", () => {
     const withPlan: Selections = { ...baseSelections, blockDiningPlan: { planLabel: "80 Block" } };
-    expect(calculateDining(withPlan, rates)).toBe(1200);
+    expect(calculateDining({ ...withPlan, semester: "fall" }, rates)).toBe(1200);
+    expect(calculateDining({ ...withPlan, semester: "spring" }, rates)).toBe(1200);
   });
 });
 
@@ -166,15 +188,17 @@ describe("calculateParking", () => {
     expect(calculateParking(baseSelections, rates)).toBe(0);
   });
 
-  it("matches on permit type + term", () => {
+  it("charges the full permit price in whichever semester, even for an annual term", () => {
     const withParking: Selections = { ...baseSelections, parking: { permitType: "Commuter", term: "annual" } };
-    expect(calculateParking(withParking, rates)).toBe(600);
+    expect(calculateParking({ ...withParking, semester: "fall" }, rates)).toBe(600);
+    expect(calculateParking({ ...withParking, semester: "spring" }, rates)).toBe(600);
   });
 });
 
 describe("calculateTotal", () => {
-  it("sums every category for a fully-loaded scenario", () => {
+  it("sums every category for a fully-loaded fall scenario", () => {
     const fullSelections: Selections = {
+      semester: "fall",
       educationLevel: "undergraduate",
       residency: "resident",
       creditHours: 15,
@@ -190,12 +214,30 @@ describe("calculateTotal", () => {
       10000 /* tuition */ +
       2000 /* differential */ +
       1800 /* fees */ +
-      (1232 + 1707) /* insurance */ +
-      10290 /* housing */ +
-      (2500 + 2500) /* dining */ +
-      600; /* parking */
+      1232 /* insurance, fall only */ +
+      10290 / 2 /* housing, half the annual rate */ +
+      2500 /* dining, fall only */ +
+      600; /* parking, full permit price */
 
     expect(calculateTotal(fullSelections, rates)).toBe(expected);
+  });
+
+  it("gives a different total for spring when insurance/dining prices differ by semester", () => {
+    const fallSelections: Selections = {
+      semester: "fall",
+      educationLevel: "undergraduate",
+      residency: "resident",
+      creditHours: 15,
+      appliesDifferentialTuition: false,
+      insurance: true,
+      housing: null,
+      residentDiningPlan: { planName: "Base" },
+      blockDiningPlan: null,
+      parking: null,
+    };
+    const springSelections: Selections = { ...fallSelections, semester: "spring" };
+
+    expect(calculateTotal(fallSelections, rates)).not.toBe(calculateTotal(springSelections, rates));
   });
 
   it("treats every missing selection as $0, not an error, for a bare-minimum scenario", () => {
