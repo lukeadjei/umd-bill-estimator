@@ -4,6 +4,13 @@ Dated, append-only record of what actually got done, one entry per work session.
 
 ---
 
+### 2026-08-29
+
+- Reworked the calculation engine to be semester-scoped: `calculateTotal` now computes one semester (fall or spring) at a time instead of an annual figure, per a deliberate product decision to let users flip between semester views in the UI (annual rollup deferred to later). `calculateHousing` halves the annual rate; `calculateInsurance` and resident `calculateDining` pick that semester's price instead of summing fall+spring; `calculateParking` charges the full permit price regardless of semester/term (matches how UMD actually bills it, confirmed).
+- Added `living_situation` (`'on_campus'`/`'commuter'`) to `scenarios` via migration — closes the "null housing could mean commuter or could mean unanswered" ambiguity flagged a few sessions back. Not yet wired into the `Selections` type — that lands with `validateSelections`, the next piece, since nothing in the calc engine itself needs it.
+- Test suite grew from 23 to 27 cases covering the semester-scoping changes.
+- PR #6 merged to `main`. Verified a clean checkout passes `npm ci` + lint + test + build.
+
 ### 2026-08-26
 
 - Built the calculation engine: `calculateTuition`, `calculateDifferentialTuition`, `calculateFees`, `calculateInsurance`, `calculateHousing`, `calculateDining`, `calculateParking`, composed by `calculateTotal` (`src/lib/calculator/calculateTotal.ts`). All pure — no DB calls — receive a full `RatesBundle` of already-fetched reference data plus the user's `Selections` and just do the math/branching.
