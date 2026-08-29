@@ -20,6 +20,10 @@ export type Residency = "resident" | "non_resident";
 export type EducationLevel = "undergraduate" | "graduate";
 // calculateTotal computes one semester's bill at a time, not a full-year total.
 export type Semester = "fall" | "spring";
+// Explicit rather than inferred from housing being null -- null was ambiguous
+// between "commuter" and "hasn't answered yet." validateSelections' job to
+// enforce housing is null for commuters and non-null for on_campus.
+export type LivingSituation = "on_campus" | "commuter";
 
 // These hold identifiers only (what the user picked), not resolved prices --
 // the calculator functions match them against RatesBundle to find the price.
@@ -48,6 +52,7 @@ export type Selections = {
   creditHours: number;
   appliesDifferentialTuition: boolean;
   insurance: boolean;
+  livingSituation: LivingSituation;
   housing: HousingSelection | null;
   // Never both set at once -- validateSelections' job to enforce, not calculateTotal's.
   residentDiningPlan: ResidentDiningSelection | null;
