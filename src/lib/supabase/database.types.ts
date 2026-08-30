@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -60,6 +60,38 @@ export type Database = {
         }
         Relationships: []
       }
+      academic_years_staging: {
+        Row: {
+          academic_year_id: string
+          full_time_fee_credit_threshold: number
+          id: string
+          scraped_at: string
+          undergrad_tuition_full_time_credit_threshold: number
+        }
+        Insert: {
+          academic_year_id: string
+          full_time_fee_credit_threshold: number
+          id?: string
+          scraped_at?: string
+          undergrad_tuition_full_time_credit_threshold: number
+        }
+        Update: {
+          academic_year_id?: string
+          full_time_fee_credit_threshold?: number
+          id?: string
+          scraped_at?: string
+          undergrad_tuition_full_time_credit_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_years_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       block_dining_plans: {
         Row: {
           academic_year_id: string
@@ -88,6 +120,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "block_dining_plans_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      block_dining_plans_staging: {
+        Row: {
+          academic_year_id: string
+          dining_dollars: number
+          id: string
+          meal_count: number
+          plan_label: string
+          price: number
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          dining_dollars: number
+          id?: string
+          meal_count: number
+          plan_label: string
+          price: number
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          dining_dollars?: number
+          id?: string
+          meal_count?: number
+          plan_label?: string
+          price?: number
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_dining_plans_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
@@ -124,6 +194,38 @@ export type Database = {
           },
         ]
       }
+      differential_tuition_staging: {
+        Row: {
+          academic_year_id: string
+          full_time_rate: number
+          id: string
+          per_credit_rate: number
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          full_time_rate: number
+          id?: string
+          per_credit_rate: number
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          full_time_rate?: number
+          id?: string
+          per_credit_rate?: number
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "differential_tuition_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       graduate_fees: {
         Row: {
           academic_year_id: string
@@ -146,6 +248,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "graduate_fees_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      graduate_fees_staging: {
+        Row: {
+          academic_year_id: string
+          full_time_rate: number
+          id: string
+          part_time_rate: number
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          full_time_rate: number
+          id?: string
+          part_time_rate: number
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          full_time_rate?: number
+          id?: string
+          part_time_rate?: number
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graduate_fees_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
@@ -182,6 +316,38 @@ export type Database = {
           },
         ]
       }
+      graduate_tuition_rates_staging: {
+        Row: {
+          academic_year_id: string
+          id: string
+          per_credit_rate: number
+          residency: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          id?: string
+          per_credit_rate: number
+          residency: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          id?: string
+          per_credit_rate?: number
+          residency?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graduate_tuition_rates_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       health_insurance_rates: {
         Row: {
           academic_year_id: string
@@ -204,6 +370,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "health_insurance_rates_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_insurance_rates_staging: {
+        Row: {
+          academic_year_id: string
+          fall_price: number
+          id: string
+          scraped_at: string
+          spring_price: number
+        }
+        Insert: {
+          academic_year_id: string
+          fall_price: number
+          id?: string
+          scraped_at?: string
+          spring_price: number
+        }
+        Update: {
+          academic_year_id?: string
+          fall_price?: number
+          id?: string
+          scraped_at?: string
+          spring_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_insurance_rates_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
@@ -243,6 +441,41 @@ export type Database = {
           },
         ]
       }
+      housing_rates_staging: {
+        Row: {
+          academic_year_id: string
+          building_category: string
+          id: string
+          rate: number
+          room_type: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          building_category: string
+          id?: string
+          rate: number
+          room_type: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          building_category?: string
+          id?: string
+          rate?: number
+          room_type?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "housing_rates_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandatory_fees: {
         Row: {
           academic_year_id: string
@@ -265,6 +498,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "mandatory_fees_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandatory_fees_staging: {
+        Row: {
+          academic_year_id: string
+          full_time_rate: number
+          id: string
+          part_time_rate: number
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          full_time_rate: number
+          id?: string
+          part_time_rate: number
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          full_time_rate?: number
+          id?: string
+          part_time_rate?: number
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandatory_fees_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
@@ -304,6 +569,41 @@ export type Database = {
           },
         ]
       }
+      parking_permits_staging: {
+        Row: {
+          academic_year_id: string
+          id: string
+          permit_type: string
+          price: number
+          scraped_at: string
+          term: string
+        }
+        Insert: {
+          academic_year_id: string
+          id?: string
+          permit_type: string
+          price: number
+          scraped_at?: string
+          term: string
+        }
+        Update: {
+          academic_year_id?: string
+          id?: string
+          permit_type?: string
+          price?: number
+          scraped_at?: string
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_permits_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resident_dining_plans: {
         Row: {
           academic_year_id: string
@@ -335,6 +635,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "resident_dining_plans_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resident_dining_plans_staging: {
+        Row: {
+          academic_year_id: string
+          dining_dollars: number
+          fall_price: number
+          guest_passes: number
+          id: string
+          plan_name: string
+          scraped_at: string
+          spring_price: number
+        }
+        Insert: {
+          academic_year_id: string
+          dining_dollars: number
+          fall_price: number
+          guest_passes: number
+          id?: string
+          plan_name: string
+          scraped_at?: string
+          spring_price: number
+        }
+        Update: {
+          academic_year_id?: string
+          dining_dollars?: number
+          fall_price?: number
+          guest_passes?: number
+          id?: string
+          plan_name?: string
+          scraped_at?: string
+          spring_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resident_dining_plans_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
@@ -467,6 +808,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tuition_rates_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tuition_rates_staging: {
+        Row: {
+          academic_year_id: string
+          full_time_rate: number
+          id: string
+          per_credit_rate: number
+          residency: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          full_time_rate: number
+          id?: string
+          per_credit_rate: number
+          residency: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          full_time_rate?: number
+          id?: string
+          per_credit_rate?: number
+          residency?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tuition_rates_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"
