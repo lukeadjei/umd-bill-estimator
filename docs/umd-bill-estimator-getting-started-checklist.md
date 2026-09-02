@@ -74,6 +74,20 @@ Move into the build sprints (data layer → calculation engine → core UI → r
 
 ---
 
+## Pages Checklist
+
+Started 2026-08-30, once the homepage was far enough along to plan the rest of the app around it. Answers the still-open "User flow" item in Phase 2 above.
+
+- [x] **Homepage** (`/`) — hero, disclaimer, illustrations, preview-card stack. Layout/styling essentially done; still open: real content for the Housing/Dining/Parking preview cards (blocked on those features existing) and optional scroll/motion polish beyond the entrance-fade + hover-lift already in place.
+- [ ] **Auth page** (`/sign-in` or similar) — sign in and create account. Recommend one combined page with a toggle between the two modes rather than separate routes — less to build, and Supabase Auth's email/password + OAuth flows fit a single form either way. Needs a password-reset flow too ("forgot password") — easy to forget since it's not a page anyone thinks of until it's missing.
+- [ ] **Main dashboard** (`/dashboard` or similar) — the actual calculator: selection form (tuition/housing/dining/parking), live itemized `calculateTotal` breakdown, and the AI natural-language input section (parses free text into structured selections — never computes dollars itself, per the AI rule in `CLAUDE.md`). This is the core of the app; probably its own multi-session build once started.
+- [ ] **Settings page** (`/settings`) — account info, delete-account/delete-data, and saved scenarios. Worth deciding explicitly: does "saved scenarios" get its own page/route (`/scenarios`), or live as a section/tab inside Settings? Either works — flagging so it's a deliberate call, not a default.
+- [ ] **Privacy/data policy page** — the footer already has a literal placeholder line for this ("real privacy/data policy goes here once that page exists"), so the footer link is currently dead. Needed before this is truly portfolio-ready, not just a nice-to-have.
+- [ ] **About / methodology page** — explains what the estimator does, how the numbers are sourced (scraper → staging → manual review → live tables), and restates the unofficial/unaffiliated disclaimer in more depth than the homepage's one-liner. Good for interview credibility ("how do you know your data is right?") and reusable as README content.
+- [ ] **404 / not-found page** — cheap in Next.js (`app/not-found.tsx`), easy polish item, currently missing.
+
+---
+
 ## Decisions & Ideas Log
 
 Running record of choices made and why — copy this into `docs/DECISIONS.md` once your repo exists, and keep appending as you go.

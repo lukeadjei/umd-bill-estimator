@@ -114,12 +114,21 @@ export function Hero() {
         }}
       />
 
-      <p className="text-sm text-muted-foreground">Unofficial · Not affiliated with the University of Maryland</p>
+      {/* Staggered entrance: each major element fades/slides in ~100ms after
+          the previous one (animate-fade-in-up + animation-delay), top to
+          bottom, so the page feels like it's assembling rather than
+          appearing all at once. animate-fade-in-up's "both" fill mode keeps
+          each element invisible during its own delay instead of flashing
+          in early. Respects prefers-reduced-motion globally (see
+          globals.css). */}
+      <p className="animate-fade-in-up text-sm text-muted-foreground">
+        Unofficial · Not affiliated with the University of Maryland
+      </p>
 
       {/* font-spicy-rice -- specifically requested by name, loaded via
           next/font/google like the other fonts. Single-weight display font,
           so font-bold doesn't do much here, left in harmlessly. */}
-      <h1 className="w-fit max-w-full font-spicy-rice text-4xl font-bold tracking-wider text-foreground md:text-5xl">
+      <h1 className="animate-fade-in-up w-fit max-w-full font-spicy-rice text-4xl font-bold tracking-wider text-foreground [animation-delay:100ms] md:text-5xl">
         UMD Bill Estimator
       </h1>
 
@@ -152,7 +161,7 @@ export function Hero() {
           small/low-opacity per feedback that it shouldn't be a big shadow. */}
       <Card
         size="sm"
-        className="max-w-xs bg-card/85 shadow-[-3px_4px_8px_-3px_rgba(0,0,0,0.18)] md:-ml-4"
+        className="animate-fade-in-up max-w-xs bg-card/85 shadow-[-3px_4px_8px_-3px_rgba(0,0,0,0.18)] [animation-delay:200ms] md:-ml-4"
       >
         <CardContent className="flex flex-col gap-2">
           <p className="text-base leading-snug font-semibold text-foreground">
@@ -171,7 +180,7 @@ export function Hero() {
           the bottom-left shadow, tightened text. */}
       <Card
         size="sm"
-        className="max-w-xs bg-card/85 shadow-[-3px_4px_8px_-3px_rgba(0,0,0,0.18)] md:-ml-4"
+        className="animate-fade-in-up max-w-xs bg-card/85 shadow-[-3px_4px_8px_-3px_rgba(0,0,0,0.18)] [animation-delay:300ms] md:-ml-4"
       >
         <CardContent>
           <ol className="flex flex-col gap-1.5 text-base leading-snug font-semibold text-foreground">
@@ -191,7 +200,7 @@ export function Hero() {
       {/* Placement per the rough sketch: near the seam between the two columns,
           vertically centered. Only positioned this way at md+ -- on mobile it's
           just centered in normal document flow. */}
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row md:absolute md:top-1/2 md:-right-8 md:mt-0 md:-translate-y-1/2 md:flex-col">
+      <div className="animate-fade-in-up mt-4 flex flex-col gap-2 [animation-delay:400ms] sm:flex-row md:absolute md:top-1/2 md:-right-8 md:mt-0 md:-translate-y-1/2 md:flex-col">
         {/* Overriding size="lg"'s default height/padding here rather than
             editing button.tsx -- keeps "lg" generic for buttons elsewhere,
             this is just how big *these two* need to be. */}

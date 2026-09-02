@@ -28,22 +28,26 @@ export function FeaturePreviewStack() {
       {/* xl:, not md: -- the cards are already close to the column's edge at
           narrower md widths (~768-1024px), and shifting them right there
           causes real overflow. Only shifting once there's actually room. */}
+      {/* transition-transform + hover:-translate-y-2 gives each card a small
+          lift on hover; hover:z-40 (above all three base z-indexes) so the
+          lifted card always comes to the front instead of sliding behind
+          whichever neighbor already has a higher base z-index. */}
       <div className="relative h-[32rem] w-full max-w-xs xl:translate-x-8">
-        <Card className="absolute top-0 left-0 z-30 w-60 -rotate-6">
+        <Card className="absolute top-0 left-0 z-30 w-60 -rotate-6 transition-transform duration-300 hover:-translate-y-2 hover:z-40 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Housing</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">Preview coming soon</CardContent>
         </Card>
 
-        <Card className="absolute top-40 left-10 z-20 w-60 rotate-6">
+        <Card className="absolute top-40 left-10 z-20 w-60 rotate-6 transition-transform duration-300 hover:-translate-y-2 hover:z-40 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Dining</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">Preview coming soon</CardContent>
         </Card>
 
-        <Card className="absolute top-80 left-0 z-10 w-60 -rotate-6">
+        <Card className="absolute top-80 left-0 z-10 w-60 -rotate-6 transition-transform duration-300 hover:-translate-y-2 hover:z-40 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Parking</CardTitle>
           </CardHeader>
