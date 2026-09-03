@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t px-6 py-8 text-sm text-muted-foreground md:px-12">
@@ -6,8 +8,11 @@ export function Footer() {
         sponsored by the University of Maryland.
       </p>
       <p className="mt-2">
-        We only store the selections you choose to save to an account. Placeholder — real privacy/data policy goes
-        here once that page exists.
+        We only store the selections you choose to save to an account. Read our{" "}
+        <Link href="/privacy" className="text-primary underline-offset-4 hover:underline">
+          privacy &amp; data policy
+        </Link>{" "}
+        for details.
       </p>
     </footer>
   );

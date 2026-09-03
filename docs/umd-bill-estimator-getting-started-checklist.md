@@ -82,9 +82,9 @@ Started 2026-08-30, once the homepage was far enough along to plan the rest of t
 - [ ] **Auth page** (`/sign-in`) — screen built and verified 2026-09-02: scattered background, shared McKeldin corner treatment, Google-only sign-in card (see PROGRESS-LOG for the two bugs caught during verification). Still open: the actual Supabase Google OAuth wiring (Google Cloud Console client + Supabase provider config), and deciding whether email/password gets added later as a second option.
 - [ ] **Main dashboard** (`/dashboard`) — skeleton built, polished, and the state-lifting fix landed, all 2026-09-02 (see PROGRESS-LOG): all panel state now lives in one `selections` object in `DashboardShell` (typed as the real `Selections`, not a parallel shape) instead of each panel's own `useState` — closes a real bug where switching tabs silently discarded whatever was picked. Still open: real `calculateTotal` wiring, real Supabase data (rates + majors list), the AI parse-to-selections call, and persistence (save scenario → results page).
 - [ ] **Settings page** (`/settings`) — screen built and verified 2026-09-02: 20/80 category-rail/content split, Account (with delete-account) and Saved Scenarios categories, "Back to dashboard" button. Still open: real Supabase wiring for account data, saved-scenario persistence, and actual account deletion.
-- [ ] **Privacy/data policy page** — the footer already has a literal placeholder line for this ("real privacy/data policy goes here once that page exists"), so the footer link is currently dead. Needed before this is truly portfolio-ready, not just a nice-to-have.
-- [ ] **About / methodology page** — explains what the estimator does, how the numbers are sourced (scraper → staging → manual review → live tables), and restates the unofficial/unaffiliated disclaimer in more depth than the homepage's one-liner. Good for interview credibility ("how do you know your data is right?") and reusable as README content.
-- [ ] **404 / not-found page** — cheap in Next.js (`app/not-found.tsx`), easy polish item, currently missing.
+- [ ] **Privacy/data policy page** (`/privacy`) — screen built and verified 2026-09-03; footer link now points here instead of being dead. **Copy needs a human revision pass before this is final** — see Backlog.
+- [ ] **About / methodology page** (`/about`) — screen built and verified 2026-09-03. **Copy needs a human revision pass before this is final** — see Backlog.
+- [ ] **404 / not-found page** (`src/app/not-found.tsx`) — built and verified 2026-09-03. **Copy needs a human revision pass before this is final** — see Backlog.
 
 ---
 
@@ -93,6 +93,7 @@ Started 2026-08-30, once the homepage was far enough along to plan the rest of t
 Small, real to-dos that aren't a whole page/phase on their own — noted here so they don't get lost.
 
 - [ ] **Scraper: fetch the real major list.** The dashboard's Major tab is currently a free-text input as a placeholder — needs the scraper to pull UMD's actual major list (and, later, which ones carry differential tuition) so it can become a real search/select. Not urgent, revisit after the dashboard's core selections are wired to real data.
+- [ ] **Revise the copy on `/privacy`, `/about`, and the 404 page.** The layout/design/structure is approved, but the actual wording was drafted by three parallel agents (2026-09-03) grounded in the project's real facts (RLS policy, scrape pipeline, etc.) — it hasn't had a human editing pass yet. Go through each page's text and rewrite/tighten anything that doesn't sound like how you'd actually say it before treating these as final.
 
 ---
 
