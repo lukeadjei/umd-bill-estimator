@@ -19,11 +19,14 @@ const SCATTER_LAYOUT: ScatterItem[] = [
   { icon: "pencil", top: "44%", left: "60%", size: "w-8", rotate: 18 },
   { icon: "paper", top: "50%", left: "30%", size: "w-12", rotate: -19 },
   { icon: "calculator", top: "58%", left: "85%", size: "w-11", rotate: 6 },
-  { icon: "pencil", top: "64%", left: "12%", size: "w-7", rotate: -25 },
-  { icon: "paper", top: "70%", left: "68%", size: "w-14", rotate: 13 },
+  // Four pencil/paper entries were removed from this bottom stretch (was:
+  // pencil 64%/12%, paper 70%/68%, pencil 84%/90%, paper 90%/18%) -- on
+  // mobile specifically, McKeldin's w-80 covers ~85% of the viewport width
+  // at the bottom, so items that cleared it on desktop still landed on top
+  // of it at narrow widths. Confirmed via getBoundingClientRect overlap at
+  // both breakpoints, not just eyeballed. The two calculator entries here
+  // stay -- only pencil/paper were asked to be cleared.
   { icon: "calculator", top: "78%", left: "40%", size: "w-10", rotate: -9 },
-  { icon: "pencil", top: "84%", left: "90%", size: "w-8", rotate: 20 },
-  { icon: "paper", top: "90%", left: "18%", size: "w-12", rotate: -15 },
   { icon: "calculator", top: "96%", left: "58%", size: "w-9", rotate: 11 },
 ];
 
