@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import type { LivingSituation } from "@/lib/calculator/types";
+import type { PanelProps } from "@/components/dashboard/selections";
 
-export function HousingPanel({ spacious }: { spacious: boolean }) {
-  const [livingSituation, setLivingSituation] = useState<"on_campus" | "commuter">("on_campus");
-  const [roomType, setRoomType] = useState<"single" | "double" | "triple_quad">("double");
-  const [buildingCategory, setBuildingCategory] = useState<
-    "traditional" | "semi_suite" | "suite" | "apartment"
-  >("traditional");
+// Falls back to when there's no prior on-campus choice yet (housing is null
+// while commuter is selected, or on first load).
+const DEFAULT_HOUSING = { roomType: "double", buildingCategory: "traditional" };
+
+export function HousingPanel({ selections, onChange, spacious }: PanelProps) {
+  const { livingSituation, housing } = selections;
+  const roomType = housing?.roomType ?? DEFAULT_HOUSING.roomType;
+  const buildingCategory = housing?.buildingCategory ?? DEFAULT_HOUSING.buildingCategory;
   const t = panelTextSizes(spacious);
+
+  // Commuters don't have housing at all -- matches how the real Selections
+  // type models it (null, not just hidden fields with stale values sitting
+  // underneath). Switching back to on-campus starts over at the default
+  // rather than remembering a prior choice, which is fine for now -- if
+  // that turns out to matter, it's a small addition, not a redesign.
+  function handleLivingSituationChange(value: LivingSituation) {
+    onChange({
+      livingSituation: value,
+      housing: value === "commuter" ? null : DEFAULT_HOUSING,
+    });
+  }
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -25,7 +40,7 @@ export function HousingPanel({ spacious }: { spacious: boolean }) {
         <OptionGroup
           label="Living situation"
           value={livingSituation}
-          onChange={setLivingSituation}
+          onChange={handleLivingSituationChange}
           spacious={spacious}
           options={[
             { value: "on_campus", label: "On-campus" },
@@ -41,7 +56,7 @@ export function HousingPanel({ spacious }: { spacious: boolean }) {
             <OptionGroup
               label="Room type"
               value={roomType}
-              onChange={setRoomType}
+              onChange={(value) => onChange({ housing: { roomType: value, buildingCategory } })}
               spacious={spacious}
               options={[
                 { value: "single", label: "Single" },
@@ -56,7 +71,7 @@ export function HousingPanel({ spacious }: { spacious: boolean }) {
             <OptionGroup
               label="Building category"
               value={buildingCategory}
-              onChange={setBuildingCategory}
+              onChange={(value) => onChange({ housing: { roomType, buildingCategory: value } })}
               spacious={spacious}
               options={[
                 { value: "traditional", label: "Traditional" },

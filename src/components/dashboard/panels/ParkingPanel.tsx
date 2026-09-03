@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import type { PanelProps } from "@/components/dashboard/selections";
+
+type PermitTypeOption = "commuter" | "resident" | "overnight_storage" | "none";
+type TermOption = "annual" | "fall" | "spring" | "summer";
 
 // Real permit-type options are filtered by living situation (residents vs.
 // commuters get different eligible types) -- not enforced here, all three
 // are shown regardless of what's picked on the Housing tab.
-export function ParkingPanel({ spacious }: { spacious: boolean }) {
-  const [permitType, setPermitType] = useState<"commuter" | "resident" | "overnight_storage" | "none">("none");
-  const [term, setTerm] = useState<"annual" | "fall" | "spring" | "summer">("annual");
+//
+// selections.parking is null | { permitType, term } -- "none" isn't a real
+// value in that type, it's this panel's own way of representing "haven't
+// picked a permit," derived from parking being null.
+export function ParkingPanel({ selections, onChange, spacious }: PanelProps) {
+  const permitType: PermitTypeOption = (selections.parking?.permitType as PermitTypeOption) ?? "none";
+  const term: TermOption = (selections.parking?.term as TermOption) ?? "annual";
   const t = panelTextSizes(spacious);
+
+  function handlePermitTypeChange(value: PermitTypeOption) {
+    onChange({ parking: value === "none" ? null : { permitType: value, term } });
+  }
+
+  function handleTermChange(value: TermOption) {
+    if (permitType !== "none") onChange({ parking: { permitType, term: value } });
+  }
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -25,7 +40,7 @@ export function ParkingPanel({ spacious }: { spacious: boolean }) {
         <OptionGroup
           label="Permit type"
           value={permitType}
-          onChange={setPermitType}
+          onChange={handlePermitTypeChange}
           spacious={spacious}
           options={[
             { value: "none", label: "None" },
@@ -42,7 +57,7 @@ export function ParkingPanel({ spacious }: { spacious: boolean }) {
           <OptionGroup
             label="Term"
             value={term}
-            onChange={setTerm}
+            onChange={handleTermChange}
             spacious={spacious}
             options={[
               { value: "annual", label: "Annual" },

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { Button } from "@/components/ui/button";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import type { EducationLevel, Residency } from "@/lib/calculator/types";
+import type { PanelProps } from "@/components/dashboard/selections";
 
 // A few labeled marks along the 1-20 range rather than all twenty (which
 // would be unreadably cramped) -- positioned by percentage so they line up
@@ -14,22 +15,12 @@ function markPosition(value: number) {
   return ((value - 1) / (20 - 1)) * 100;
 }
 
-export function TuitionPanel({ spacious }: { spacious: boolean }) {
-  const [educationLevel, setEducationLevel] = useState<"undergraduate" | "graduate">("undergraduate");
-  const [residency, setResidency] = useState<"resident" | "non_resident">("resident");
-  const [creditHours, setCreditHours] = useState(12);
-  // Real differential-tuition eligibility should eventually derive from the
-  // Major tab's selection (junior/senior standing in a qualifying major) --
-  // that link doesn't exist yet, so this stays a manual toggle for now.
-  const [appliesDifferentialTuition, setAppliesDifferentialTuition] = useState(false);
-  // Maps directly to Selections.insurance -- undergrad eligibility triggers
-  // at 6+ credits, grad at 48+ units/semester (or 36 in a 12-week term); that
-  // eligibility check isn't enforced here, just the opt-in toggle itself.
-  const [insurance, setInsurance] = useState(false);
+export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
+  const { educationLevel, residency, creditHours, appliesDifferentialTuition, insurance } = selections;
   const t = panelTextSizes(spacious);
 
   function updateCreditHours(next: number) {
-    if (!Number.isNaN(next)) setCreditHours(Math.min(20, Math.max(1, next)));
+    if (!Number.isNaN(next)) onChange({ creditHours: Math.min(20, Math.max(1, next)) });
   }
 
   return (
@@ -46,7 +37,7 @@ export function TuitionPanel({ spacious }: { spacious: boolean }) {
         <OptionGroup
           label="Education level"
           value={educationLevel}
-          onChange={setEducationLevel}
+          onChange={(value: EducationLevel) => onChange({ educationLevel: value })}
           spacious={spacious}
           options={[
             { value: "undergraduate", label: "Undergraduate" },
@@ -60,7 +51,7 @@ export function TuitionPanel({ spacious }: { spacious: boolean }) {
         <OptionGroup
           label="Residency"
           value={residency}
-          onChange={setResidency}
+          onChange={(value: Residency) => onChange({ residency: value })}
           spacious={spacious}
           options={[
             { value: "resident", label: "Maryland resident" },
@@ -84,7 +75,7 @@ export function TuitionPanel({ spacious }: { spacious: boolean }) {
               step={1}
               list="credit-hour-marks"
               value={creditHours}
-              onChange={(event) => setCreditHours(Number(event.target.value))}
+              onChange={(event) => onChange({ creditHours: Number(event.target.value) })}
               className="h-2 w-full accent-primary"
               aria-label="Credit hours"
             />
@@ -141,7 +132,7 @@ export function TuitionPanel({ spacious }: { spacious: boolean }) {
             variant={appliesDifferentialTuition ? "default" : "outline"}
             className={spacious ? "rounded-full text-lg" : "rounded-full text-base"}
             aria-pressed={appliesDifferentialTuition}
-            onClick={() => setAppliesDifferentialTuition((current) => !current)}
+            onClick={() => onChange({ appliesDifferentialTuition: !appliesDifferentialTuition })}
           >
             {appliesDifferentialTuition ? "Yes" : "No"}
           </Button>
@@ -157,7 +148,7 @@ export function TuitionPanel({ spacious }: { spacious: boolean }) {
             variant={insurance ? "default" : "outline"}
             className={spacious ? "rounded-full text-lg" : "rounded-full text-base"}
             aria-pressed={insurance}
-            onClick={() => setInsurance((current) => !current)}
+            onClick={() => onChange({ insurance: !insurance })}
           >
             {insurance ? "Yes" : "No"}
           </Button>

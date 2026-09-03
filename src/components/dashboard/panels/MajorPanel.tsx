@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { panelTextSizes } from "@/components/dashboard/typography";
 import { PanelTip } from "@/components/dashboard/PanelTip";
+import type { PanelProps } from "@/components/dashboard/selections";
 
-// `major` isn't part of the Selections type yet -- it's a plain string field
+// `major` isn't part of the real Selections type -- it's a plain string field
 // on the `scenarios` table, drafted for a future major-based dropdown/feature
 // but not currently wired to differential-tuition logic in the calc engine
 // (see PROGRESS-LOG.md, 2026-08-30). Picking a major here won't do anything
@@ -13,8 +13,7 @@ import { PanelTip } from "@/components/dashboard/PanelTip";
 // TODO (backlog, not urgent): this is a free-text field because the scraper
 // doesn't fetch a real major list yet. Once it does, swap this for a real
 // search/select populated from that scraped list instead of a plain input.
-export function MajorPanel({ spacious }: { spacious: boolean }) {
-  const [major, setMajor] = useState("");
+export function MajorPanel({ selections, onChange, spacious }: PanelProps) {
   const t = panelTextSizes(spacious);
 
   return (
@@ -31,8 +30,8 @@ export function MajorPanel({ spacious }: { spacious: boolean }) {
         <span className={`font-medium text-foreground ${t.label}`}>Search your major</span>
         <input
           type="text"
-          value={major}
-          onChange={(event) => setMajor(event.target.value)}
+          value={selections.major}
+          onChange={(event) => onChange({ major: event.target.value })}
           placeholder="e.g. Computer Science"
           className={`w-full max-w-sm rounded-lg border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${t.body}`}
         />

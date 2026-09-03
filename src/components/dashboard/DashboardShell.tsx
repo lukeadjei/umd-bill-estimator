@@ -11,14 +11,12 @@ import { SummaryBar } from "@/components/dashboard/SummaryBar";
 import { ProgressChecklist } from "@/components/dashboard/ProgressChecklist";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
 import type { TabId } from "@/components/dashboard/tabs";
+import { DEFAULT_SELECTIONS, type PanelProps } from "@/components/dashboard/selections";
 import { MajorPanel } from "@/components/dashboard/panels/MajorPanel";
 import { TuitionPanel } from "@/components/dashboard/panels/TuitionPanel";
 import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
 import { ParkingPanel } from "@/components/dashboard/panels/ParkingPanel";
 import { MealsPanel } from "@/components/dashboard/panels/MealsPanel";
-
-type Semester = "fall" | "spring";
-type PanelProps = { spacious: boolean };
 
 const PANELS: Record<TabId, ComponentType<PanelProps>> = {
   major: MajorPanel,
@@ -87,23 +85,35 @@ const SCATTER = SCATTER_LAYOUT.map((item, index) => ({
   opacity: OPACITY_TIERS[index % OPACITY_TIERS.length],
 }));
 
-// Owns every piece of skeleton-level state: active tab, which tabs have
-// been visited (a stand-in for "filled in" -- see ProgressChecklist),
-// semester, whether the mobile chat overlay is open, and whether the
-// desktop chat panel is collapsed. Nothing here is real Selections/form
-// state yet, so it stays local to this component rather than lifted to
-// context or a store. Each tab panel keeps its own placeholder field state
-// internally until a real form exists to lift it into.
+// Owns every piece of dashboard state: the single `selections` object every
+// panel reads its slice of and writes back into (see selections.ts -- this
+// is the real Selections type from the calc engine, not a parallel shape),
+// which tab is active, which tabs have been visited (a stand-in for "filled
+// in" -- see ProgressChecklist), whether the mobile chat overlay is open,
+// and whether the desktop chat panel is collapsed.
+//
+// `selections` living here (not in each panel) matters for a reason beyond
+// tidiness: only the ACTIVE panel is ever mounted (see PANELS[activeTab]
+// below) -- switching tabs unmounts the old panel and mounts the new one.
+// If each panel held its own useState, switching away and back would
+// destroy and recreate that state, silently discarding whatever the user
+// had picked. Lifting it here means the panel components themselves are
+// "dumb" -- they just render whatever slice of `selections` they're given
+// and call `onChange` with a patch, so nothing is lost on tab switches.
 export function DashboardShell() {
   const [activeTab, setActiveTab] = useState<TabId>("major");
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["major"]));
-  const [semester, setSemester] = useState<Semester>("fall");
+  const [selections, setSelections] = useState(DEFAULT_SELECTIONS);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
 
   function handleTabChange(tab: TabId) {
     setActiveTab(tab);
     setVisitedTabs((current) => new Set(current).add(tab));
+  }
+
+  function updateSelections(patch: Partial<typeof selections>) {
+    setSelections((current) => ({ ...current, ...patch }));
   }
 
   const ActivePanel = PANELS[activeTab];
@@ -138,8 +148,8 @@ export function DashboardShell() {
       <DashboardNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        semester={semester}
-        onSemesterChange={setSemester}
+        semester={selections.semester}
+        onSemesterChange={(semester) => updateSelections({ semester })}
         chatCollapsed={chatCollapsed}
         onToggleChat={() => setChatCollapsed((current) => !current)}
       />
@@ -149,12 +159,12 @@ export function DashboardShell() {
           <ProgressChecklist visited={visitedTabs} />
 
           <div className="animate-fade-in-up flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
-            <ActivePanel spacious={chatCollapsed} />
+            <ActivePanel selections={selections} onChange={updateSelections} spacious={chatCollapsed} />
           </div>
 
-          <CostBreakdown semester={semester} />
+          <CostBreakdown semester={selections.semester} />
 
-          <SummaryBar semester={semester} />
+          <SummaryBar semester={selections.semester} />
         </div>
 
         {!chatCollapsed && <ChatPanel onCollapse={() => setChatCollapsed(true)} />}

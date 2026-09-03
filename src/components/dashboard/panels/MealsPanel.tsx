@@ -1,24 +1,36 @@
 "use client";
 
-import { useState } from "react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import type { PanelProps } from "@/components/dashboard/selections";
 
-// residentDiningPlan and blockDiningPlan are mutually exclusive in
-// Selections (enforced in validateSelections, not here) -- modeled as one
-// choice with a "none" option rather than two independent toggles, so the
-// UI can't represent the invalid "both set" state in the first place.
-export function MealsPanel({ spacious }: { spacious: boolean }) {
-  const [plan, setPlan] = useState<"resident" | "block" | "none">("resident");
+type PlanMode = "resident" | "block" | "none";
+type ResidentTier = "base" | "base_plus" | "preferred" | "premium";
+type BlockTier = "small" | "medium" | "large";
+
+// residentDiningPlan and blockDiningPlan are mutually exclusive in the real
+// Selections type (enforced in validateSelections, not here) -- modeled as
+// one derived `plan` choice with a "none" option rather than two independent
+// toggles, so the UI can't represent the invalid "both set" state in the
+// first place. `plan` itself isn't stored -- it's derived from which of the
+// two fields is non-null.
+export function MealsPanel({ selections, onChange, spacious }: PanelProps) {
+  const plan: PlanMode = selections.residentDiningPlan ? "resident" : selections.blockDiningPlan ? "block" : "none";
   // Resident plan tiers are real (dining.umd.edu/students/resident-plans, per
   // docs/umd-bill-estimator-getting-started-checklist.md). Block/Connector
   // tier labels below are placeholders -- the real ones live in scraped
   // `block_dining_plans` rows (plan_label, meal_count) once that table is
   // populated; swap these for the real values then.
-  const [residentTier, setResidentTier] = useState<"base" | "base_plus" | "preferred" | "premium">("base");
-  const [blockTier, setBlockTier] = useState<"small" | "medium" | "large">("medium");
+  const residentTier = (selections.residentDiningPlan?.planName as ResidentTier) ?? "base";
+  const blockTier = (selections.blockDiningPlan?.planLabel as BlockTier) ?? "medium";
   const t = panelTextSizes(spacious);
+
+  function handlePlanChange(value: PlanMode) {
+    if (value === "resident") onChange({ residentDiningPlan: { planName: residentTier }, blockDiningPlan: null });
+    else if (value === "block") onChange({ blockDiningPlan: { planLabel: blockTier }, residentDiningPlan: null });
+    else onChange({ residentDiningPlan: null, blockDiningPlan: null });
+  }
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -34,7 +46,7 @@ export function MealsPanel({ spacious }: { spacious: boolean }) {
         <OptionGroup
           label="Dining plan"
           value={plan}
-          onChange={setPlan}
+          onChange={handlePlanChange}
           spacious={spacious}
           options={[
             { value: "resident", label: "Resident plan" },
@@ -50,7 +62,7 @@ export function MealsPanel({ spacious }: { spacious: boolean }) {
           <OptionGroup
             label="Resident plan tier"
             value={residentTier}
-            onChange={setResidentTier}
+            onChange={(value: ResidentTier) => onChange({ residentDiningPlan: { planName: value } })}
             spacious={spacious}
             options={[
               { value: "base", label: "Base" },
@@ -68,7 +80,7 @@ export function MealsPanel({ spacious }: { spacious: boolean }) {
           <OptionGroup
             label="Block plan size"
             value={blockTier}
-            onChange={setBlockTier}
+            onChange={(value: BlockTier) => onChange({ blockDiningPlan: { planLabel: value } })}
             spacious={spacious}
             options={[
               { value: "small", label: "Small block" },
