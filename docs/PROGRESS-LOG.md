@@ -4,6 +4,10 @@ Dated, append-only record of what actually got done, one entry per work session.
 
 ---
 
+### 2026-09-02
+
+- **Decision: Google OAuth only for now, not email/password.** Reasoning: no cost either way (Google Sign-In is free for standard `email`/`profile` scopes — the paid ~$500/year Google verification only applies to restricted/sensitive scopes this app doesn't need; Supabase Auth pricing is per-MAU regardless of which method they used, so it doesn't push a higher tier either). The deciding factor was the actual user base: UMD students' `@umd.edu` addresses are Google Workspace-backed, so Google-only doesn't meaningfully exclude the realistic audience the way it might for a general-public app. Email/password stays an option to add later as a second method if needed (Supabase supports both simultaneously on one page) — not ruled out, just not built first. Actual Google Cloud Console + Supabase provider wiring deferred until the auth page's screen/layout exists.
+
 ### 2026-08-30
 
 - Built the scraper pipeline end to end and proved it against the real UMD sites, not mocks: `scraper/fetch*Page.ts` (one per link group — undergrad tuition, grad tuition, housing, resident dining, Connector/block dining, parking) use plain `fetch` + Cheerio to pull real values out of each page's actual HTML. Confirmed "Connector" as the real UMD name for the block dining plan (resolves a naming question from a few sessions back), and confirmed the block plan explicitly does not satisfy the resident dining requirement — matches what `validateSelections` already enforces.

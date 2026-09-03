@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ComponentType } from "react";
-import Image from "next/image";
+import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { ChatPanel } from "@/components/dashboard/ChatPanel";
 import { ChatFab } from "@/components/dashboard/ChatFab";
@@ -26,24 +26,12 @@ const PANELS: Record<TabId, ComponentType<PanelProps>> = {
   meals: MealsPanel,
 };
 
-// Same three homepage illustrations (not the McKeldin building -- that one's
-// specific to the homepage's bottom-left corner), scattered across the FULL
-// page -- edges and middle alike. Positions and rotation angles are
-// hand-jittered (arbitrary degree values, not a repeating -12/6/3 pattern)
-// rather than laid out on a regular grid, so it reads as scattered rather
-// than tiled. Opacity cycles through three tiers for the same reason --
-// enough variation that it doesn't look like one stamp copy-pasted. Each
-// SVG is ~1-2KB, so even thirty of them is negligible -- the actual cost
-// driver would be a large raster image repeated many times, which this
-// isn't.
-const ICONS = {
-  calculator: { src: "/illustrations/calculator.svg", w: 290, h: 430 },
-  pencil: { src: "/illustrations/pencil.svg", w: 110, h: 630 },
-  paper: { src: "/illustrations/paper.svg", w: 230, h: 340 },
-} as const;
-const OPACITY_TIERS = [0.14, 0.19, 0.24] as const;
-
-const SCATTER_LAYOUT = [
+// Positions and rotation angles are hand-jittered (arbitrary degree values,
+// not a repeating -12/6/3 pattern) rather than laid out on a regular grid,
+// so it reads as scattered rather than tiled -- see ScatteredIllustrations
+// for the shared icon set/opacity logic this renders with (also used by the
+// auth page, with its own layout tuned for that page's shape).
+const SCATTER_LAYOUT: ScatterItem[] = [
   { icon: "calculator", top: "1%", left: "6%", size: "w-16", rotate: -14 },
   { icon: "pencil", top: "4%", left: "33%", size: "w-7", rotate: 21 },
   { icon: "paper", top: "3%", left: "62%", size: "w-11", rotate: 8 },
@@ -74,16 +62,7 @@ const SCATTER_LAYOUT = [
   { icon: "calculator", top: "90%", left: "48%", size: "w-10", rotate: -10 },
   { icon: "pencil", top: "93%", left: "30%", size: "w-8", rotate: 24 },
   { icon: "paper", top: "97%", left: "76%", size: "w-14", rotate: -6 },
-] as const;
-
-const SCATTER = SCATTER_LAYOUT.map((item, index) => ({
-  ...ICONS[item.icon as keyof typeof ICONS],
-  top: item.top,
-  left: item.left,
-  size: item.size,
-  rotate: item.rotate,
-  opacity: OPACITY_TIERS[index % OPACITY_TIERS.length],
-}));
+];
 
 // Owns every piece of dashboard state: the single `selections` object every
 // panel reads its slice of and writes back into (see selections.ts -- this
@@ -120,24 +99,12 @@ export function DashboardShell() {
 
   return (
     <div className="relative isolate flex flex-1 flex-col">
-      {/* pointer-events-none + -z-10 + overflow-hidden on this layer only
-          (not the root) so it can't affect layout, clicks, or the sticky
-          chat/summary bar elsewhere in the tree. inset-0 against the
-          isolate'd root above spans the page's real (scrollable) height,
-          not just one viewport, so the scatter covers the whole page. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        {SCATTER.map((item, index) => (
-          <Image
-            key={index}
-            src={item.src}
-            alt=""
-            width={item.w}
-            height={item.h}
-            className={`absolute ${item.size}`}
-            style={{ top: item.top, left: item.left, transform: `rotate(${item.rotate}deg)`, opacity: item.opacity }}
-          />
-        ))}
-      </div>
+      {/* -z-10 + overflow-hidden inside ScatteredIllustrations only (not the
+          root) so it can't affect layout, clicks, or the sticky chat/summary
+          bar elsewhere in the tree. inset-0 against the isolate'd root above
+          spans the page's real (scrollable) height, not just one viewport,
+          so the scatter covers the whole page. */}
+      <ScatteredIllustrations layout={SCATTER_LAYOUT} />
 
       {/* Same font as the homepage's h1, at a scale that fits a persistent
           bar instead of a hero. */}
