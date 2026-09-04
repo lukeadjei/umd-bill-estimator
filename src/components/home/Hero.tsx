@@ -128,7 +128,7 @@ export function Hero() {
       {/* font-spicy-rice -- specifically requested by name, loaded via
           next/font/google like the other fonts. Single-weight display font,
           so font-bold doesn't do much here, left in harmlessly. */}
-      <h1 className="animate-fade-in-up w-fit max-w-full font-spicy-rice text-4xl font-bold tracking-wider text-foreground [animation-delay:100ms] md:text-5xl">
+      <h1 className="animate-fade-in-up w-fit max-w-full font-spicy-rice text-4xl font-bold tracking-wider text-foreground [animation-delay:100ms] [text-shadow:0_0_10px_rgba(0,0,0,0.35)] md:text-5xl">
         UMD Bill Estimator
       </h1>
 

@@ -6,8 +6,6 @@ import { panelTextSizes } from "@/components/dashboard/typography";
 import type { PanelProps } from "@/components/dashboard/selections";
 
 type PlanMode = "resident" | "block" | "none";
-type ResidentTier = "base" | "base_plus" | "preferred" | "premium";
-type BlockTier = "small" | "medium" | "large";
 
 // residentDiningPlan and blockDiningPlan are mutually exclusive in the real
 // Selections type (enforced in validateSelections, not here) -- modeled as
@@ -15,15 +13,23 @@ type BlockTier = "small" | "medium" | "large";
 // toggles, so the UI can't represent the invalid "both set" state in the
 // first place. `plan` itself isn't stored -- it's derived from which of the
 // two fields is non-null.
-export function MealsPanel({ selections, onChange, spacious }: PanelProps) {
+export function MealsPanel({ selections, onChange, spacious, rates }: PanelProps) {
   const plan: PlanMode = selections.residentDiningPlan ? "resident" : selections.blockDiningPlan ? "block" : "none";
-  // Resident plan tiers are real (dining.umd.edu/students/resident-plans, per
-  // docs/umd-bill-estimator-getting-started-checklist.md). Block/Connector
-  // tier labels below are placeholders -- the real ones live in scraped
-  // `block_dining_plans` rows (plan_label, meal_count) once that table is
-  // populated; swap these for the real values then.
-  const residentTier = (selections.residentDiningPlan?.planName as ResidentTier) ?? "base";
-  const blockTier = (selections.blockDiningPlan?.planLabel as BlockTier) ?? "medium";
+
+  // Resident plan tiers come straight from `resident_dining_plans.plan_name`
+  // (already a human-readable string like "Base Plus"), deduped in case the
+  // rates bundle ever carries more than one row per name.
+  const residentTierNames = Array.from(new Set(rates.residentDiningPlans.map((r) => r.plan_name)));
+
+  // Block/Connector tiers come from `block_dining_plans.plan_label` (e.g.
+  // "1".."4", "Combo"), which isn't descriptive on its own -- pair it with
+  // that row's meal_count (and dining dollars, if any) for the option label.
+  // The value sent through onChange is still the raw plan_label, since
+  // that's what calculateDining matches against.
+  const blockTierRows = Array.from(new Map(rates.blockDiningPlans.map((r) => [r.plan_label, r])).values());
+
+  const residentTier = selections.residentDiningPlan?.planName ?? "Base";
+  const blockTier = selections.blockDiningPlan?.planLabel ?? "1";
   const t = panelTextSizes(spacious);
 
   function handlePlanChange(value: PlanMode) {
@@ -62,14 +68,9 @@ export function MealsPanel({ selections, onChange, spacious }: PanelProps) {
           <OptionGroup
             label="Resident plan tier"
             value={residentTier}
-            onChange={(value: ResidentTier) => onChange({ residentDiningPlan: { planName: value } })}
+            onChange={(value: string) => onChange({ residentDiningPlan: { planName: value } })}
             spacious={spacious}
-            options={[
-              { value: "base", label: "Base" },
-              { value: "base_plus", label: "Base Plus" },
-              { value: "preferred", label: "Preferred" },
-              { value: "premium", label: "Premium" },
-            ]}
+            options={residentTierNames.map((name) => ({ value: name, label: name }))}
           />
         </div>
       )}
@@ -80,17 +81,14 @@ export function MealsPanel({ selections, onChange, spacious }: PanelProps) {
           <OptionGroup
             label="Block plan size"
             value={blockTier}
-            onChange={(value: BlockTier) => onChange({ blockDiningPlan: { planLabel: value } })}
+            onChange={(value: string) => onChange({ blockDiningPlan: { planLabel: value } })}
             spacious={spacious}
-            options={[
-              { value: "small", label: "Small block" },
-              { value: "medium", label: "Medium block" },
-              { value: "large", label: "Large block" },
-            ]}
+            options={blockTierRows.map((row) => {
+              const displayName = /^\d+$/.test(row.plan_label) ? `Plan ${row.plan_label}` : row.plan_label;
+              const diningDollars = row.dining_dollars > 0 ? ` + $${row.dining_dollars} dining dollars` : "";
+              return { value: row.plan_label, label: `${displayName} -- ${row.meal_count} meals${diningDollars}` };
+            })}
           />
-          <span className={`text-muted-foreground ${t.hint}`}>
-            Placeholder tiers -- real block plan names/meal counts come from the scraper.
-          </span>
         </div>
       )}
 

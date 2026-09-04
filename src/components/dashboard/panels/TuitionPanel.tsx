@@ -15,9 +15,20 @@ function markPosition(value: number) {
   return ((value - 1) / (20 - 1)) * 100;
 }
 
+// A native range/number input can't visually represent "no value" the way
+// OptionGroup's pills can (nothing highlighted) -- it always shows some
+// thumb position. So creditHours stays null (untouched) until the user
+// actually interacts with either control; until then the inputs render at
+// this neutral position but visually greyed, and the real value is still
+// null underneath (not silently defaulted) -- no separate "touched" state
+// needed, `creditHours === null` already answers that directly.
+const NEUTRAL_CREDIT_HOURS_DISPLAY = 12;
+
 export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
   const { educationLevel, residency, creditHours, appliesDifferentialTuition, insurance } = selections;
   const t = panelTextSizes(spacious);
+  const creditHoursTouched = creditHours !== null;
+  const displayCreditHours = creditHours ?? NEUTRAL_CREDIT_HOURS_DISPLAY;
 
   function updateCreditHours(next: number) {
     if (!Number.isNaN(next)) onChange({ creditHours: Math.min(20, Math.max(1, next)) });
@@ -63,6 +74,10 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
       <div className="flex flex-col gap-1.5">
         <span className={`font-medium text-foreground ${t.label}`}>Credit hours</span>
 
+        {!creditHoursTouched && (
+          <p className={`text-muted-foreground ${t.hint}`}>Move the slider or type a number to set your credit hours.</p>
+        )}
+
         {/* Number input sits right next to the slider (not off in its own
             row) so the two clearly read as one control, not two separate
             fields that happen to agree. */}
@@ -74,9 +89,9 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
               max={20}
               step={1}
               list="credit-hour-marks"
-              value={creditHours}
+              value={displayCreditHours}
               onChange={(event) => onChange({ creditHours: Number(event.target.value) })}
-              className="h-2 w-full accent-primary"
+              className={`h-2 w-full accent-primary ${creditHoursTouched ? "" : "opacity-40"}`}
               aria-label="Credit hours"
             />
             {/* datalist + list= gives the native range input real tick
@@ -106,16 +121,18 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
             type="number"
             min={1}
             max={20}
-            value={creditHours}
+            value={displayCreditHours}
             onChange={(event) => updateCreditHours(Number(event.target.value))}
-            className={`w-16 shrink-0 rounded-lg border border-input bg-background px-2 py-1.5 text-center text-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${t.body}`}
+            className={`w-16 shrink-0 rounded-lg border border-input bg-background px-2 py-1.5 text-center focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${t.body} ${creditHoursTouched ? "text-foreground" : "text-muted-foreground"}`}
           />
         </div>
 
         <p className={`text-muted-foreground ${t.hint}`}>
-          {educationLevel === "undergraduate"
-            ? "Undergrad: full-time tuition starts at 12 credits; fees go full-time at 9."
-            : "Grad full-time status is based on units/semester (48+), not credit hours -- shown here for consistency with undergrad."}
+          {educationLevel === null
+            ? "Select undergraduate or graduate above to see the full-time threshold that applies to you."
+            : educationLevel === "undergraduate"
+              ? "Undergrad: full-time tuition starts at 12 credits; fees go full-time at 9."
+              : "Grad full-time status is based on units/semester (48+), not credit hours -- shown here for consistency with undergrad."}
         </p>
       </div>
 

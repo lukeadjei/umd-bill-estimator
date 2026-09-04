@@ -1,4 +1,4 @@
-import type { Selections } from "@/lib/calculator/types";
+import type { RatesBundle, Selections } from "@/lib/calculator/types";
 
 // The dashboard's single source of truth, lifted up into DashboardShell.
 // This is the REAL Selections type from the calc engine (src/lib/calculator/types.ts)
@@ -7,20 +7,23 @@ import type { Selections } from "@/lib/calculator/types";
 // `scenarios` table, just not something calculateTotal/validateSelections need.
 export type DashboardSelections = Selections & { major: string };
 
-// Every panel's starting point. Housing/resident-dining default to non-null
-// so the on-campus fields have something sensible to show immediately --
-// HousingPanel nulls `housing` out itself when the user picks "commuter".
+// Every panel's starting point -- nothing pre-selected. A first-time visitor
+// (or a fresh page load) should see a $0 total and no validation errors
+// about combinations they never actually chose, not a bill silently
+// computed against defaults picked on their behalf. calculateTotal prices
+// every null field here as $0; validateSelections reports the required ones
+// as "not answered yet" rather than guessing.
 export const DEFAULT_SELECTIONS: DashboardSelections = {
   major: "",
   semester: "fall",
-  educationLevel: "undergraduate",
-  residency: "resident",
-  creditHours: 12,
+  educationLevel: null,
+  residency: null,
+  creditHours: null,
   appliesDifferentialTuition: false,
   insurance: false,
-  livingSituation: "on_campus",
-  housing: { roomType: "double", buildingCategory: "traditional" },
-  residentDiningPlan: { planName: "base" },
+  livingSituation: null,
+  housing: null,
+  residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
 };
@@ -34,4 +37,5 @@ export type PanelProps = {
   selections: DashboardSelections;
   onChange: (patch: Partial<DashboardSelections>) => void;
   spacious: boolean;
+  rates: RatesBundle;
 };

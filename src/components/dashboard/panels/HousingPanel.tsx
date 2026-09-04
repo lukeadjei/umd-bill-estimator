@@ -3,18 +3,52 @@
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
-import type { LivingSituation } from "@/lib/calculator/types";
+import type { HousingRateRow, LivingSituation } from "@/lib/calculator/types";
 import type { PanelProps } from "@/components/dashboard/selections";
 
 // Falls back to when there's no prior on-campus choice yet (housing is null
-// while commuter is selected, or on first load).
-const DEFAULT_HOUSING = { roomType: "double", buildingCategory: "traditional" };
+// while commuter is selected, or on first load). Must be a combination that
+// genuinely exists in housing_rates -- calculateHousing throws if it can't
+// find a matching row, so this can't be a guessed placeholder.
+const DEFAULT_HOUSING = { roomType: "Double", buildingCategory: "Traditional With AC" };
 
-export function HousingPanel({ selections, onChange, spacious }: PanelProps) {
+// Not every room_type x building_category pair has a row (e.g. "Converted
+// Single" only exists under "Traditional Without AC") -- these read the
+// real set out of the fetched rates instead of a hardcoded guess, so the UI
+// can never offer a combination calculateHousing won't find.
+function uniqueRoomTypes(housingRates: HousingRateRow[]): string[] {
+  return Array.from(new Set(housingRates.map((r) => r.room_type)));
+}
+
+function buildingCategoriesForRoomType(housingRates: HousingRateRow[], roomType: string): string[] {
+  return Array.from(
+    new Set(housingRates.filter((r) => r.room_type === roomType).map((r) => r.building_category))
+  );
+}
+
+export function HousingPanel({ selections, onChange, spacious, rates }: PanelProps) {
   const { livingSituation, housing } = selections;
   const roomType = housing?.roomType ?? DEFAULT_HOUSING.roomType;
   const buildingCategory = housing?.buildingCategory ?? DEFAULT_HOUSING.buildingCategory;
   const t = panelTextSizes(spacious);
+
+  const roomTypeOptions = uniqueRoomTypes(rates.housingRates).map((value) => ({ value, label: value }));
+  const buildingCategoryOptions = buildingCategoriesForRoomType(rates.housingRates, roomType).map((value) => ({
+    value,
+    label: value,
+  }));
+
+  // Switching room type can invalidate the current building category (not
+  // every pair exists) -- auto-correct to the first valid category for the
+  // new room type so the app can never land on a combination with no
+  // matching housing_rates row.
+  function handleRoomTypeChange(newRoomType: string) {
+    const validCategories = buildingCategoriesForRoomType(rates.housingRates, newRoomType);
+    const nextBuildingCategory = validCategories.includes(buildingCategory)
+      ? buildingCategory
+      : (validCategories[0] ?? buildingCategory);
+    onChange({ housing: { roomType: newRoomType, buildingCategory: nextBuildingCategory } });
+  }
 
   // Commuters don't have housing at all -- matches how the real Selections
   // type models it (null, not just hidden fields with stale values sitting
@@ -56,13 +90,9 @@ export function HousingPanel({ selections, onChange, spacious }: PanelProps) {
             <OptionGroup
               label="Room type"
               value={roomType}
-              onChange={(value) => onChange({ housing: { roomType: value, buildingCategory } })}
+              onChange={handleRoomTypeChange}
               spacious={spacious}
-              options={[
-                { value: "single", label: "Single" },
-                { value: "double", label: "Double" },
-                { value: "triple_quad", label: "Triple/Quad" },
-              ]}
+              options={roomTypeOptions}
             />
           </div>
 
@@ -73,16 +103,11 @@ export function HousingPanel({ selections, onChange, spacious }: PanelProps) {
               value={buildingCategory}
               onChange={(value) => onChange({ housing: { roomType, buildingCategory: value } })}
               spacious={spacious}
-              options={[
-                { value: "traditional", label: "Traditional" },
-                { value: "semi_suite", label: "Semi-Suite" },
-                { value: "suite", label: "Suite" },
-                { value: "apartment", label: "Apartment" },
-              ]}
+              options={buildingCategoryOptions}
             />
             {/* Only Apartment has a kitchen -- the Meals tab's dining-plan
                 requirement is exempt for this category. Not enforced here. */}
-            {buildingCategory === "apartment" && (
+            {buildingCategory === "Apartment" && (
               <p className={`text-muted-foreground ${t.hint}`}>
                 Apartments have a kitchen -- a dining plan won&apos;t be required on the Meals tab.
               </p>
