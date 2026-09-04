@@ -17,6 +17,18 @@ import { TuitionPanel } from "@/components/dashboard/panels/TuitionPanel";
 import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
 import { ParkingPanel } from "@/components/dashboard/panels/ParkingPanel";
 import { MealsPanel } from "@/components/dashboard/panels/MealsPanel";
+import type { RatesBundle } from "@/lib/calculator/types";
+import {
+  calculateTuition,
+  calculateDifferentialTuition,
+  calculateFees,
+  calculateHousing,
+  calculateDining,
+  calculateParking,
+  calculateInsurance,
+  calculateTotal,
+} from "@/lib/calculator/calculateTotal";
+import { validateSelections } from "@/lib/calculator/validateSelections";
 
 const PANELS: Record<TabId, ComponentType<PanelProps>> = {
   major: MajorPanel,
@@ -79,12 +91,30 @@ const SCATTER_LAYOUT: ScatterItem[] = [
 // had picked. Lifting it here means the panel components themselves are
 // "dumb" -- they just render whatever slice of `selections` they're given
 // and call `onChange` with a patch, so nothing is lost on tab switches.
-export function DashboardShell() {
+export function DashboardShell({
+  academicYearLabel,
+  rates,
+}: {
+  academicYearLabel: string;
+  rates: RatesBundle;
+}) {
   const [activeTab, setActiveTab] = useState<TabId>("major");
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["major"]));
   const [selections, setSelections] = useState(DEFAULT_SELECTIONS);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
+
+  // Recomputed from scratch on every render from the full current selection
+  // state -- never incrementally accumulated (see CLAUDE.md rule 3). Plain
+  // function calls during render, not useEffect/derived state.
+  const tuition = calculateTuition(selections, rates) + calculateDifferentialTuition(selections, rates);
+  const fees = calculateFees(selections, rates);
+  const housing = calculateHousing(selections, rates);
+  const meals = calculateDining(selections, rates);
+  const parking = calculateParking(selections, rates);
+  const insurance = calculateInsurance(selections, rates);
+  const total = calculateTotal(selections, rates);
+  const validationResult = validateSelections(selections);
 
   function handleTabChange(tab: TabId) {
     setActiveTab(tab);
@@ -109,7 +139,10 @@ export function DashboardShell() {
       {/* Same font as the homepage's h1, at a scale that fits a persistent
           bar instead of a hero. */}
       <div className="px-4 pt-6 pb-2 text-center md:px-8 md:pt-8 md:text-left">
-        <h1 className="font-spicy-rice text-2xl tracking-wider text-foreground md:text-3xl">UMD Bill Estimator</h1>
+        <h1 className="font-spicy-rice text-2xl tracking-wider text-foreground [text-shadow:0_0_10px_rgba(0,0,0,0.35)] md:text-3xl">
+          UMD Bill Estimator
+        </h1>
+        <p className="text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
       </div>
 
       <DashboardNav
@@ -126,12 +159,15 @@ export function DashboardShell() {
           <ProgressChecklist visited={visitedTabs} />
 
           <div className="animate-fade-in-up flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
-            <ActivePanel selections={selections} onChange={updateSelections} spacious={chatCollapsed} />
+            <ActivePanel selections={selections} onChange={updateSelections} spacious={chatCollapsed} rates={rates} />
           </div>
 
-          <CostBreakdown semester={selections.semester} />
+          <CostBreakdown
+            semester={selections.semester}
+            values={{ tuition, fees, housing, meals, parking, insurance }}
+          />
 
-          <SummaryBar semester={selections.semester} />
+          <SummaryBar semester={selections.semester} total={total} validation={validationResult} />
         </div>
 
         {!chatCollapsed && <ChatPanel onCollapse={() => setChatCollapsed(true)} />}

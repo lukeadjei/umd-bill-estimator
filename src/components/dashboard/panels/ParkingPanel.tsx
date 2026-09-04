@@ -5,7 +5,12 @@ import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
 import type { PanelProps } from "@/components/dashboard/selections";
 
-type PermitTypeOption = "commuter" | "resident" | "overnight_storage" | "none";
+// permit_type is a plain `string` column (see ParkingPermitRow / RatesBundle
+// in src/lib/calculator/types.ts) -- real values are Title Case, e.g.
+// "Commuter", "Resident", "Overnight Storage". "none" is not a real
+// permit_type value; it's this panel's own sentinel for "haven't picked a
+// permit," layered on top of the real values pulled from rates.parkingPermits.
+type PermitTypeOption = string | "none";
 type TermOption = "annual" | "fall" | "spring" | "summer";
 
 // Real permit-type options are filtered by living situation (residents vs.
@@ -15,10 +20,12 @@ type TermOption = "annual" | "fall" | "spring" | "summer";
 // selections.parking is null | { permitType, term } -- "none" isn't a real
 // value in that type, it's this panel's own way of representing "haven't
 // picked a permit," derived from parking being null.
-export function ParkingPanel({ selections, onChange, spacious }: PanelProps) {
-  const permitType: PermitTypeOption = (selections.parking?.permitType as PermitTypeOption) ?? "none";
+export function ParkingPanel({ selections, onChange, spacious, rates }: PanelProps) {
+  const permitType: PermitTypeOption = selections.parking?.permitType ?? "none";
   const term: TermOption = (selections.parking?.term as TermOption) ?? "annual";
   const t = panelTextSizes(spacious);
+
+  const permitTypeOptions = Array.from(new Set(rates.parkingPermits.map((row) => row.permit_type))).sort();
 
   function handlePermitTypeChange(value: PermitTypeOption) {
     onChange({ parking: value === "none" ? null : { permitType: value, term } });
@@ -44,9 +51,7 @@ export function ParkingPanel({ selections, onChange, spacious }: PanelProps) {
           spacious={spacious}
           options={[
             { value: "none", label: "None" },
-            { value: "commuter", label: "Commuter" },
-            { value: "resident", label: "Resident" },
-            { value: "overnight_storage", label: "Overnight Storage" },
+            ...permitTypeOptions.map((value) => ({ value, label: value })),
           ]}
         />
       </div>

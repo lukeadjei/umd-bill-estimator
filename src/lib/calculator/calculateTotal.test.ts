@@ -18,6 +18,7 @@ const rates: RatesBundle = {
   academicYear: {
     id: "year-1",
     label: "Test Year",
+    is_current: true,
     undergrad_tuition_full_time_credit_threshold: 12,
     full_time_fee_credit_threshold: 9,
   },
@@ -79,6 +80,18 @@ describe("calculateTuition", () => {
       calculateTuition({ ...baseSelections, educationLevel: "graduate", creditHours: 15 }, rates)
     ).toBe(15 * 600);
   });
+
+  it("is $0 when education level hasn't been answered yet", () => {
+    expect(calculateTuition({ ...baseSelections, educationLevel: null }, rates)).toBe(0);
+  });
+
+  it("is $0 when residency hasn't been answered yet", () => {
+    expect(calculateTuition({ ...baseSelections, residency: null }, rates)).toBe(0);
+  });
+
+  it("is $0 when credit hours haven't been set yet", () => {
+    expect(calculateTuition({ ...baseSelections, creditHours: null }, rates)).toBe(0);
+  });
 });
 
 describe("calculateDifferentialTuition", () => {
@@ -103,6 +116,12 @@ describe("calculateDifferentialTuition", () => {
       calculateDifferentialTuition({ ...baseSelections, appliesDifferentialTuition: true, creditHours: 6 }, rates)
     ).toBe(6 * 150);
   });
+
+  it("is $0 when credit hours haven't been set yet, even with the flag on", () => {
+    expect(
+      calculateDifferentialTuition({ ...baseSelections, appliesDifferentialTuition: true, creditHours: null }, rates)
+    ).toBe(0);
+  });
 });
 
 describe("calculateFees", () => {
@@ -116,6 +135,14 @@ describe("calculateFees", () => {
 
   it("uses the graduate fee table for graduate students", () => {
     expect(calculateFees({ ...baseSelections, educationLevel: "graduate", creditHours: 9 }, rates)).toBe(1500);
+  });
+
+  it("is $0 when education level hasn't been answered yet", () => {
+    expect(calculateFees({ ...baseSelections, educationLevel: null }, rates)).toBe(0);
+  });
+
+  it("is $0 when credit hours haven't been set yet", () => {
+    expect(calculateFees({ ...baseSelections, creditHours: null }, rates)).toBe(0);
   });
 });
 
@@ -246,5 +273,22 @@ describe("calculateTotal", () => {
   it("treats every missing selection as $0, not an error, for a bare-minimum scenario", () => {
     // baseSelections: full-time undergrad tuition (10000) + full-time fees (1800), everything else null/off.
     expect(calculateTotal(baseSelections, rates)).toBe(10000 + 1800);
+  });
+
+  it("is exactly $0 for a brand-new visitor who hasn't answered anything yet", () => {
+    const untouched: Selections = {
+      semester: "fall",
+      educationLevel: null,
+      residency: null,
+      creditHours: null,
+      appliesDifferentialTuition: false,
+      insurance: false,
+      livingSituation: null,
+      housing: null,
+      residentDiningPlan: null,
+      blockDiningPlan: null,
+      parking: null,
+    };
+    expect(calculateTotal(untouched, rates)).toBe(0);
   });
 });

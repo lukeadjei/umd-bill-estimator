@@ -47,12 +47,17 @@ export type ParkingSelection = {
 
 export type Selections = {
   semester: Semester;
-  educationLevel: EducationLevel;
-  residency: Residency;
-  creditHours: number;
+  // null means "hasn't been answered yet" -- distinct from any real choice.
+  // calculateTotal prices this as $0 for the affected line; validateSelections
+  // reports it as a required field, rather than downstream logic guessing a
+  // default and producing a misleading combination error against a choice
+  // the user never actually made.
+  educationLevel: EducationLevel | null;
+  residency: Residency | null;
+  creditHours: number | null;
   appliesDifferentialTuition: boolean;
   insurance: boolean;
-  livingSituation: LivingSituation;
+  livingSituation: LivingSituation | null;
   housing: HousingSelection | null;
   // Never both set at once -- validateSelections' job to enforce, not calculateTotal's.
   residentDiningPlan: ResidentDiningSelection | null;

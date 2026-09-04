@@ -12,24 +12,31 @@ function findOrThrow<T>(rows: T[], predicate: (row: T) => boolean, description: 
 
 // Undergrad: flat rate at the credit threshold, per-credit below it.
 // Grad: always per-credit, no flat rate exists at that level.
+// educationLevel/residency/creditHours are all nullable ("hasn't answered
+// yet") -- can't price tuition without all three, so this returns $0 rather
+// than guessing a default (consistent with the "missing selection = $0"
+// rule for every other category).
 export function calculateTuition(selections: Selections, rates: RatesBundle): number {
-  if (selections.educationLevel === "graduate") {
+  const { educationLevel, residency, creditHours } = selections;
+  if (educationLevel === null || residency === null || creditHours === null) return 0;
+
+  if (educationLevel === "graduate") {
     const rate = findOrThrow(
       rates.graduateTuitionRates,
-      (r) => r.residency === selections.residency,
-      `graduate tuition rate (residency: ${selections.residency})`
+      (r) => r.residency === residency,
+      `graduate tuition rate (residency: ${residency})`
     );
     // Always per-credit -- no full-time flat rate exists at the graduate level.
-    return rate.per_credit_rate * selections.creditHours;
+    return rate.per_credit_rate * creditHours;
   }
 
-  const isFullTime = selections.creditHours >= rates.academicYear.undergrad_tuition_full_time_credit_threshold;
+  const isFullTime = creditHours >= rates.academicYear.undergrad_tuition_full_time_credit_threshold;
   const rate = findOrThrow(
     rates.tuitionRates,
-    (r) => r.residency === selections.residency,
-    `undergraduate tuition rate (residency: ${selections.residency})`
+    (r) => r.residency === residency,
+    `undergraduate tuition rate (residency: ${residency})`
   );
-  return isFullTime ? rate.full_time_rate : rate.per_credit_rate * selections.creditHours;
+  return isFullTime ? rate.full_time_rate : rate.per_credit_rate * creditHours;
 }
 
 // Same flat-vs-per-credit split as calculateTuition, added as a separate line item.
@@ -40,16 +47,22 @@ export function calculateDifferentialTuition(selections: Selections, rates: Rate
   if (selections.educationLevel === "graduate") return 0;
   if (!selections.appliesDifferentialTuition) return 0;
 
-  const isFullTime = selections.creditHours >= rates.academicYear.undergrad_tuition_full_time_credit_threshold;
+  const { educationLevel, creditHours } = selections;
+  if (educationLevel === null || creditHours === null) return 0;
+
+  const isFullTime = creditHours >= rates.academicYear.undergrad_tuition_full_time_credit_threshold;
   const rate = findOrThrow(rates.differentialTuition, () => true, "differential tuition rate");
-  return isFullTime ? rate.full_time_rate : rate.per_credit_rate * selections.creditHours;
+  return isFullTime ? rate.full_time_rate : rate.per_credit_rate * creditHours;
 }
 
 // Flat rate above the fee credit threshold, different flat rate below it -- no per-credit math, unlike tuition.
 export function calculateFees(selections: Selections, rates: RatesBundle): number {
-  const isFullTime = selections.creditHours >= rates.academicYear.full_time_fee_credit_threshold;
+  const { educationLevel, creditHours } = selections;
+  if (educationLevel === null || creditHours === null) return 0;
 
-  if (selections.educationLevel === "graduate") {
+  const isFullTime = creditHours >= rates.academicYear.full_time_fee_credit_threshold;
+
+  if (educationLevel === "graduate") {
     const rate = findOrThrow(rates.graduateFees, () => true, "graduate mandatory fee rate");
     return isFullTime ? rate.full_time_rate : rate.part_time_rate;
   }

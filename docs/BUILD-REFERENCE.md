@@ -58,6 +58,22 @@ Every reference table hangs off `academic_years` via foreign key. Deferred, not 
 
 ---
 
+## Running the scraper pipeline
+
+Manual, by hand, until step 12's AWS automation lands (and even then, only the scrape-into-staging half will ever be automated — promotion stays a deliberate human decision by design):
+
+```
+npm run scrape -- <academic_year_id>
+npm run promote -- <academic_year_id>
+```
+
+- `scrape` fetches the live UMD pages and writes into the 11 `_staging` tables — never the live tables directly.
+- `promote` copies reviewed staging data into the live tables. Review the staged values before running this.
+- Both are idempotent (clear-before-write) — safe to re-run either one.
+- `<academic_year_id>` is the UUID from the `academic_years` table (e.g. `9aedff47-7e30-477b-ab85-9ca9cae145f0` for 2026-2027).
+
+---
+
 ## Testing
 - Vitest for unit tests, focused almost entirely on `calculateTotal`/`validateSelections` and their sub-functions — pure functions, cheap and high-value to test
 - Skip E2E/UI testing (Playwright, etc.) for v1 — low payoff at this stage, revisit later if desired
@@ -66,17 +82,21 @@ Every reference table hangs off `academic_years` via foreign key. Deferred, not 
 
 ## Build order
 
-1. Repo setup — public GitHub repo, MIT license, branch protection, `docs/` folder
-2. Supabase fundamentals learning session (prerequisite)
-3. Scaffold Next.js + TypeScript + Tailwind
-4. Create Supabase project, build out the full schema
-5. Set environment variables
-6. Build the calculation engine (pure functions) + unit tests — do this early, it's the highest-value piece
-7. Build `validateSelections`
-8. Build the selection UI with live-updating total (recompute pattern)
-9. Build the Generate/save flow (Server Action → `scenarios` table)
-10. Build the results/print page
-11. Build the AI natural-language input feature (Route Handler)
-12. Set up the AWS scraper pipeline (S3, Lambda, EventBridge, IAM)
-13. Set up CI/CD (GitHub Actions lint/build, Vercel auto-deploy)
-14. Polish, accessibility pass, deploy
+**This table is the canonical "where am I" status — kept current across sessions/machines. Updated whenever a decision is made about what to work on, in what order, or when a step's status changes.** Full session-by-session detail lives in `docs/PROGRESS-LOG.md`; this table is the condensed current-state view.
+
+| # | Step | Status | Notes |
+|---|---|---|---|
+| 1 | Repo setup — public GitHub repo, MIT license, branch protection, `docs/` folder | Done | |
+| 2 | Supabase fundamentals learning session (prerequisite) | Done | |
+| 3 | Scaffold Next.js + TypeScript + Tailwind | Done | 2026-08-23 |
+| 4 | Create Supabase project, build out the full schema | Done | 2026-08-24 — 11 tables + `scenarios`, RLS on everything |
+| 5 | Set environment variables | Done | |
+| 6 | Build the calculation engine (pure functions) + unit tests | Done | 2026-08-26; reworked semester-scoped 2026-08-29 |
+| 7 | Build `validateSelections` | Done | 2026-08-29 |
+| 8 | Build the selection UI with live-updating total (recompute pattern) | **Done** | Dashboard skeleton + state-lifting fix 2026-09-02. Cached `RatesBundle` fetch 2026-09-03 (`server.ts`, `getRatesBundle.ts`, `unstable_cache`, `academic_years.is_current`). **2026-09-04 13:54 EDT: `calculateTotal`/`validateSelections` fully wired** — `DashboardShell` recomputes every category + the total + validation on every render from real Supabase data; every panel's option lists now derive from real DB values instead of hardcoded placeholders (was a real bug — placeholder values didn't match real casing and would have made `calculateTotal` throw); invalid selection combinations hide the total ("Fix errors to see total") and disable "Generate Plan" instead of showing a misleading number. Verified live in-browser against real computed values, not just type-checked. |
+| 9 | Build the Generate/save flow (Server Action → `scenarios` table) | Not started | Blocked on step 8 |
+| 10 | Build the results/print page | Not started | Blocked on step 8 |
+| 11 | Build the AI natural-language input feature (Route Handler) | Not started | Blocked on step 8 — needs a real live UI/calc pipeline to parse into and verify against |
+| 12 | Set up the AWS scraper pipeline (S3, Lambda, EventBridge, IAM) | Partial | Manual `npm run scrape` / `npm run promote` pipeline built and run for real against 2026-2027 data (2026-08-30). Lambda/EventBridge automation of the trigger still deferred — not blocking anything, promotion is meant to stay a manual human decision anyway. |
+| 13 | Set up CI/CD (GitHub Actions lint/build, Vercel auto-deploy) | Partial | GitHub Actions lint/build done 2026-08-23. Vercel auto-deploy not connected. |
+| 14 | Polish, accessibility pass, deploy | Not started | |

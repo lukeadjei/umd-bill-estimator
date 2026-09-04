@@ -69,7 +69,9 @@ export function AuthShell() {
       />
 
       <div className="animate-fade-in-up flex flex-col items-center gap-8">
-        <h1 className="font-spicy-rice text-3xl tracking-wider text-foreground md:text-4xl">UMD Bill Estimator</h1>
+        <h1 className="font-spicy-rice text-3xl tracking-wider text-foreground [text-shadow:0_0_10px_rgba(0,0,0,0.35)] md:text-4xl">
+          UMD Bill Estimator
+        </h1>
 
         <Card className="w-full max-w-sm rounded-none bg-card/90 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.3)]">
           <CardContent className="flex flex-col items-center gap-6 py-4 text-center">

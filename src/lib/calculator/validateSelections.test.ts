@@ -45,6 +45,56 @@ describe("validateSelections -- credit hours", () => {
     expect(result.valid).toBe(false);
     expect(fieldsOf(result.errors)).toContain("creditHours");
   });
+
+  it("reports null credit hours as required, not as an out-of-bounds error", () => {
+    const result = validateSelections({ ...baseOnCampus, creditHours: null });
+    expect(result.valid).toBe(false);
+    const creditHoursErrors = result.errors.filter((e) => e.field === "creditHours");
+    expect(creditHoursErrors).toHaveLength(1);
+    expect(creditHoursErrors[0].message).toMatch(/enter your credit hours/i);
+  });
+});
+
+describe("validateSelections -- required fields not yet answered", () => {
+  const untouched: Selections = {
+    semester: "fall",
+    educationLevel: null,
+    residency: null,
+    creditHours: null,
+    appliesDifferentialTuition: false,
+    insurance: false,
+    livingSituation: null,
+    housing: null,
+    residentDiningPlan: null,
+    blockDiningPlan: null,
+    parking: null,
+  };
+
+  it("reports every always-required field for a brand-new, untouched selection", () => {
+    const result = validateSelections(untouched);
+    expect(result.valid).toBe(false);
+    expect(fieldsOf(result.errors)).toEqual(
+      expect.arrayContaining(["educationLevel", "residency", "creditHours", "livingSituation"])
+    );
+  });
+
+  it("does not fall through to the on_campus housing-required check while livingSituation is unanswered", () => {
+    // If null silently fell through to the "else" (on_campus) branch, this
+    // would also report a "housing" error alongside "livingSituation" --
+    // it should report only that living situation itself needs answering.
+    const result = validateSelections(untouched);
+    expect(fieldsOf(result.errors)).not.toContain("housing");
+  });
+
+  it("does not misjudge parking eligibility while livingSituation is unanswered (the original reported bug)", () => {
+    // Regression test: picking a parking permit before ever visiting the
+    // Housing tab used to produce a misleading "on-campus students can only
+    // buy Resident" / "commuter students can only buy Commuter" error against
+    // a living-situation choice the user never actually made.
+    const result = validateSelections({ ...untouched, parking: { permitType: "Commuter", term: "annual" } });
+    expect(fieldsOf(result.errors)).not.toContain("parking");
+    expect(fieldsOf(result.errors)).toContain("livingSituation");
+  });
 });
 
 describe("validateSelections -- living situation vs. housing", () => {
