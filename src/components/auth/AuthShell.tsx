@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 // Same jittered scatter language as the dashboard, just its own layout --
 // no nav bar/multi-column grid to work around here, so the icons spread
@@ -31,6 +32,16 @@ const SCATTER_LAYOUT: ScatterItem[] = [
 ];
 
 export function AuthShell() {
+  async function handleGoogleSignIn() {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  }
+
   return (
     <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-16">
       <ScatteredIllustrations layout={SCATTER_LAYOUT} />
@@ -82,17 +93,12 @@ export function AuthShell() {
               </p>
             </div>
 
-            {/* Not wired yet -- Google Cloud Console + Supabase provider
-                config are deferred until this screen itself is settled (see
-                PROGRESS-LOG.md, 2026-09-02). onClick is a placeholder. */}
             <Button
               type="button"
               variant="outline"
               size="lg"
               className="w-full gap-3 rounded-full text-base"
-              onClick={() => {
-                // TODO: supabase.auth.signInWithOAuth({ provider: "google" })
-              }}
+              onClick={handleGoogleSignIn}
             >
               <GoogleIcon className="size-5" />
               Continue with Google
