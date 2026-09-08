@@ -40,6 +40,10 @@ Every table below has an `academic_year_id` foreign key to `academic_years`, whi
 - A scenario should never have both `resident_dining_plan_id` and `block_dining_plan_id` set — not enforced by the database, must be enforced in application code.
 - Health insurance eligibility differs by student level: undergrad triggers at 6+ credits, grad triggers at 48+ units/semester (or 36 in a 12-week term) — a different threshold and a different unit system, not just a different number.
 
+## Code organization conventions
+
+- Before creating a new folder anywhere in the codebase, check whether a folder with that name (or a near-duplicate purpose) already exists elsewhere in the tree — don't create a second `panels/`, `actions.ts`, etc. in a different location when an existing one already serves that role, and don't give two different folders overlapping names/purposes. Keep new files/folders organized consistently with the existing structure rather than bolting on a parallel convention.
+
 ## Working style with the developer
 
 This project is being built for internship prep — the goal is code the developer can defend in an interview, not just code that works. Calibrate what to build autonomously vs. what to work through together:

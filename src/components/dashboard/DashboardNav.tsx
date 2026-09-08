@@ -1,8 +1,16 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SemesterToggle } from "@/components/dashboard/SemesterToggle";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+} from "@/components/ui/dropdown-menu";
 import { TAB_ITEMS, type TabId } from "@/components/dashboard/tabs";
 import { MessageCircleIcon } from "lucide-react";
+import { signOutAction } from "@/app/settings/actions";
 
 type Semester = "fall" | "spring";
 
@@ -13,6 +21,8 @@ export function DashboardNav({
   onSemesterChange,
   chatCollapsed,
   onToggleChat,
+  isSignedIn,
+  avatarUrl,
 }: {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
@@ -20,6 +30,8 @@ export function DashboardNav({
   onSemesterChange: (semester: Semester) => void;
   chatCollapsed: boolean;
   onToggleChat: () => void;
+  isSignedIn: boolean;
+  avatarUrl: string | null;
 }) {
   return (
     <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
@@ -82,6 +94,29 @@ export function DashboardNav({
         >
           <MessageCircleIcon />
         </Button>
+
+        {/* Dashboard's entry point into settings/scenarios/sign-out -- shown
+            only for signed-in users (guests see nothing in its place, no
+            placeholder icon). Plain <img>, not next/image: avatar_url is an
+            external Google-hosted URL and next/image would require
+            allow-listing that domain in next.config.ts's images.remotePatterns. */}
+        {isSignedIn && avatarUrl !== null && (
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label="Open account menu" className="rounded-full">
+              <img
+                src={avatarUrl}
+                alt="Your profile"
+                referrerPolicy="no-referrer"
+                className="size-8 rounded-full ring-1 ring-foreground/10 object-cover"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLinkItem href="/settings">Settings</DropdownMenuLinkItem>
+              <DropdownMenuLinkItem href="/settings?tab=scenarios">Saved Scenarios</DropdownMenuLinkItem>
+              <DropdownMenuItem onClick={() => signOutAction()}>Sign out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );

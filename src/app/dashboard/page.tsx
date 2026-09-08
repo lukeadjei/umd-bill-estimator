@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
+import { getServerUser } from "@/lib/supabase/authServer";
+import { resolveScenarioToSelections } from "@/lib/supabase/scenarios";
 
 export const metadata: Metadata = {
   title: "Dashboard — UMD Bill Estimator",
@@ -24,7 +26,34 @@ export const dynamic = "force-dynamic";
 // The rates fetch itself is cached (see getRatesBundle.ts) -- this await
 // only pays the real Supabase round-trip cost for whichever request is
 // first to hit a cache miss, not every visitor.
-export default async function DashboardPage() {
-  const rates = await getRatesBundle();
-  return <DashboardShell academicYearLabel={rates.academicYear.label} rates={rates} />;
+// ?scenario=<id> loads a previously-saved scenario's selections into the
+// dashboard instead of starting from the empty defaults -- e.g. clicking a
+// saved plan on the Settings page links here. Resolution happens through
+// resolveScenarioToSelections, which only ever returns a scenario that
+// actually belongs to the signed-in user (ownership-checked via the
+// session-bound client + an explicit user_id filter, not just RLS alone) --
+// a guest, or a signed-in user passing someone else's id, or an id that no
+// longer resolves against the current rates, all just fail closed back to
+// the normal empty defaults rather than exposing another user's data or
+// seeding a half-resolved state.
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scenario?: string }>;
+}) {
+  const [rates, user, { scenario: scenarioId }] = await Promise.all([getRatesBundle(), getServerUser(), searchParams]);
+
+  const initialSelections =
+    scenarioId && user ? await resolveScenarioToSelections(scenarioId, user.id, rates) : null;
+
+  return (
+    <DashboardShell
+      academicYearLabel={rates.academicYear.label}
+      rates={rates}
+      isSignedIn={user !== null}
+      userName={(user?.user_metadata?.full_name as string | undefined) ?? null}
+      avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
+      initialSelections={initialSelections}
+    />
+  );
 }

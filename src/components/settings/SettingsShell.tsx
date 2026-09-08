@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type { ComponentType } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { SettingsNav } from "@/components/settings/SettingsNav";
@@ -10,11 +10,30 @@ import { Button } from "@/components/ui/button";
 import type { CategoryId } from "@/components/settings/categories";
 import { AccountPanel } from "@/components/settings/panels/AccountPanel";
 import { SavedScenariosPanel } from "@/components/settings/panels/SavedScenariosPanel";
+import type { SavedScenario } from "@/lib/supabase/scenarios";
 
-const PANELS: Record<CategoryId, ComponentType> = {
-  account: AccountPanel,
-  scenarios: SavedScenariosPanel,
-};
+// Reads ?tab= and reports back which category it names -- "scenarios"
+// selects the Saved Scenarios panel on load (e.g. a link from
+// DashboardNav), anything else (missing param, "account", or an
+// unrecognized value) defaults to "account" same as before this existed.
+// useSearchParams() bails a Client Component out of static rendering for
+// whatever it's called in unless that call is wrapped in <Suspense>, so
+// the read is isolated in this tiny component rather than at the top of
+// SettingsShell.
+function InitialTabReader({ onResolved }: { onResolved: (tab: CategoryId) => void }) {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+
+  // useEffect, not a call during render: onResolved calls setActive on the
+  // parent, and updating a different component's state mid-render (rather
+  // than after this one has committed) is what React's rules of rendering
+  // disallow. Runs once per resolved tab value.
+  useEffect(() => {
+    onResolved(tab === "scenarios" ? "scenarios" : "account");
+  }, [tab, onResolved]);
+
+  return null;
+}
 
 // Same scattered-icon background language as the dashboard/auth pages, minus
 // McKeldin -- this page is a small centered panel, not a full hero, so the
@@ -38,16 +57,30 @@ const SCATTER_LAYOUT: ScatterItem[] = [
   { icon: "calculator", top: "97%", left: "22%", size: "w-10", rotate: 11 },
 ];
 
+type SettingsShellProps = {
+  name: string | null;
+  email: string | null;
+  scenarios: SavedScenario[];
+};
+
 // Only two categories today -- Account and Saved Scenarios. Which one's
-// active is the only real state here; each panel is self-contained (Account
-// has no live data to hold, Saved Scenarios is a pure empty state) so
-// there's nothing to lift up the way the dashboard's Selections needed to be.
-export function SettingsShell() {
+// active is the only real state here. The two panels now take different,
+// incompatible prop shapes (Account needs name/email, Saved Scenarios needs
+// the scenarios list), so rendering the active one is a plain conditional
+// rather than a generic `PANELS` component lookup -- there's no prop shape
+// a single lookup type could describe for both anymore.
+export function SettingsShell({ name, email, scenarios }: SettingsShellProps) {
   const [active, setActive] = useState<CategoryId>("account");
-  const ActivePanel = PANELS[active];
 
   return (
     <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-16">
+      {/* Renders nothing -- it only resolves ?tab= into the initial `active`
+          value via the effect above. Suspense fallback is null since there's
+          no visible content to placeholder here. */}
+      <Suspense fallback={null}>
+        <InitialTabReader onResolved={setActive} />
+      </Suspense>
+
       <ScatteredIllustrations layout={SCATTER_LAYOUT} />
 
       <div className="animate-fade-in-up flex w-full max-w-4xl flex-col items-center gap-8">
@@ -87,7 +120,11 @@ export function SettingsShell() {
           </div>
 
           <div className="min-h-[24rem] p-6 md:p-8">
-            <ActivePanel />
+            {active === "account" ? (
+              <AccountPanel name={name} email={email} />
+            ) : (
+              <SavedScenariosPanel scenarios={scenarios} />
+            )}
           </div>
         </div>
       </div>
