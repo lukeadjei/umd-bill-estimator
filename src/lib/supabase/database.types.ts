@@ -694,14 +694,18 @@ export type Database = {
           computed_total: number
           created_at: string
           credit_hours: number
+          graduate_tuition_rate_id: string | null
           housing_rate_id: string | null
           id: string
+          insurance_selected: boolean
           living_situation: string
           major: string | null
           name: string
+          note: string | null
           parking_permit_id: string | null
           resident_dining_plan_id: string | null
-          tuition_rate_id: string
+          semester: string
+          tuition_rate_id: string | null
           updated_at: string
           user_id: string
         }
@@ -712,14 +716,18 @@ export type Database = {
           computed_total: number
           created_at?: string
           credit_hours: number
+          graduate_tuition_rate_id?: string | null
           housing_rate_id?: string | null
           id?: string
+          insurance_selected?: boolean
           living_situation: string
           major?: string | null
           name: string
+          note?: string | null
           parking_permit_id?: string | null
           resident_dining_plan_id?: string | null
-          tuition_rate_id: string
+          semester: string
+          tuition_rate_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -730,14 +738,18 @@ export type Database = {
           computed_total?: number
           created_at?: string
           credit_hours?: number
+          graduate_tuition_rate_id?: string | null
           housing_rate_id?: string | null
           id?: string
+          insurance_selected?: boolean
           living_situation?: string
           major?: string | null
           name?: string
+          note?: string | null
           parking_permit_id?: string | null
           resident_dining_plan_id?: string | null
-          tuition_rate_id?: string
+          semester?: string
+          tuition_rate_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -754,6 +766,13 @@ export type Database = {
             columns: ["block_dining_plan_id"]
             isOneToOne: false
             referencedRelation: "block_dining_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenarios_graduate_tuition_rate_id_fkey"
+            columns: ["graduate_tuition_rate_id"]
+            isOneToOne: false
+            referencedRelation: "graduate_tuition_rates"
             referencedColumns: ["id"]
           },
           {

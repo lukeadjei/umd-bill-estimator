@@ -10,8 +10,9 @@ import { ChatOverlay } from "@/components/dashboard/ChatOverlay";
 import { SummaryBar } from "@/components/dashboard/SummaryBar";
 import { ProgressChecklist } from "@/components/dashboard/ProgressChecklist";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
+import { PanelNavArrows } from "@/components/dashboard/PanelNavArrows";
 import type { TabId } from "@/components/dashboard/tabs";
-import { DEFAULT_SELECTIONS, type PanelProps } from "@/components/dashboard/selections";
+import { DEFAULT_SELECTIONS, type DashboardSelections, type PanelProps } from "@/components/dashboard/selections";
 import { MajorPanel } from "@/components/dashboard/panels/MajorPanel";
 import { TuitionPanel } from "@/components/dashboard/panels/TuitionPanel";
 import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
@@ -94,13 +95,23 @@ const SCATTER_LAYOUT: ScatterItem[] = [
 export function DashboardShell({
   academicYearLabel,
   rates,
+  isSignedIn,
+  userName,
+  avatarUrl,
+  initialSelections,
 }: {
   academicYearLabel: string;
   rates: RatesBundle;
+  isSignedIn: boolean;
+  userName: string | null;
+  avatarUrl: string | null;
+  initialSelections?: DashboardSelections | null;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("major");
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["major"]));
-  const [selections, setSelections] = useState(DEFAULT_SELECTIONS);
+  // initialSelections seeds this from a loaded ?scenario= (see dashboard/page.tsx)
+  // -- falls back to the empty defaults for a normal fresh visit.
+  const [selections, setSelections] = useState(initialSelections ?? DEFAULT_SELECTIONS);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
 
@@ -143,6 +154,9 @@ export function DashboardShell({
           UMD Bill Estimator
         </h1>
         <p className="text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
+        {isSignedIn && userName !== null && (
+          <p className="text-sm text-foreground/60">Welcome back, {userName}</p>
+        )}
       </div>
 
       <DashboardNav
@@ -152,13 +166,16 @@ export function DashboardShell({
         onSemesterChange={(semester) => updateSelections({ semester })}
         chatCollapsed={chatCollapsed}
         onToggleChat={() => setChatCollapsed((current) => !current)}
+        isSignedIn={isSignedIn}
+        avatarUrl={avatarUrl}
       />
 
       <div className="grid flex-1 grid-cols-1 items-start gap-4 p-4 md:grid-cols-[1fr_auto] md:p-8">
         <div className="flex min-w-0 flex-col gap-4">
           <ProgressChecklist visited={visitedTabs} />
 
-          <div className="animate-fade-in-up flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
+          <div className="animate-fade-in-up relative flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
+            <PanelNavArrows activeTab={activeTab} onTabChange={handleTabChange} />
             <ActivePanel selections={selections} onChange={updateSelections} spacious={chatCollapsed} rates={rates} />
           </div>
 
@@ -167,7 +184,13 @@ export function DashboardShell({
             values={{ tuition, fees, housing, meals, parking, insurance }}
           />
 
-          <SummaryBar semester={selections.semester} total={total} validation={validationResult} />
+          <SummaryBar
+            semester={selections.semester}
+            total={total}
+            validation={validationResult}
+            isSignedIn={isSignedIn}
+            selections={selections}
+          />
         </div>
 
         {!chatCollapsed && <ChatPanel onCollapse={() => setChatCollapsed(true)} />}

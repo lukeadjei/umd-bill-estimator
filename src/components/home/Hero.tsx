@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -204,10 +205,16 @@ export function Hero() {
         {/* Overriding size="lg"'s default height/padding here rather than
             editing button.tsx -- keeps "lg" generic for buttons elsewhere,
             this is just how big *these two* need to be. */}
-        <Button size="lg" className="h-14 px-26 text-base font-bold">
+        <Button size="lg" className="h-14 px-26 text-base font-bold" nativeButton={false} render={<Link href="/dashboard" />}>
           Try it now
         </Button>
-        <Button size="lg" variant="outline" className="h-14 px-26 text-base font-bold">
+        <Button
+          size="lg"
+          variant="outline"
+          className="h-14 px-26 text-base font-bold"
+          nativeButton={false}
+          render={<Link href="/sign-in" />}
+        >
           Sign In
         </Button>
       </div>
