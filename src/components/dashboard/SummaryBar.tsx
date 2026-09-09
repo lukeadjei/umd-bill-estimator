@@ -82,65 +82,85 @@ export function SummaryBar({ semester, total, validation, isSignedIn, selections
         )}
       </div>
 
-      {/* Guest mode takes priority over everything else this bar could show
-          for the button -- a guest never sees a working save button, whether
-          or not the current plan is valid, because scenarios.user_id
-          requires a real signed-in user. */}
-      {!isSignedIn ? (
-        <Button type="button" size="lg" className="rounded-full text-lg" nativeButton={false} render={<Link href="/sign-in" />}>
-          Sign in to save your plan
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Generate never touches the database -- it just navigates to a
+            page that reads the current selections back out of sessionStorage
+            and formats them for printing/PDF -- so unlike Save, it's
+            available to guests too. Still gated on validity: there's no
+            reason to produce a print-ready estimate for a combination that
+            isn't actually legal to purchase. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="rounded-full text-lg"
+          disabled={!validation.valid}
+          nativeButton={false}
+          render={<Link href="/dashboard/results" />}
+        >
+          Generate
         </Button>
-      ) : (
-        <>
-          <Button
-            type="button"
-            size="lg"
-            className="rounded-full text-lg"
-            disabled={!validation.valid || saveState.status === "saving"}
-            onClick={() => setNoteDialogOpen(true)}
-          >
-            {saveState.status === "saving" ? "Saving..." : saveState.status === "success" ? "Saved!" : "Save"}
+
+        {/* Guest mode takes priority over everything else this bar could show
+            for the Save button -- a guest never sees a working save button,
+            whether or not the current plan is valid, because scenarios.user_id
+            requires a real signed-in user. */}
+        {!isSignedIn ? (
+          <Button type="button" size="lg" className="rounded-full text-lg" nativeButton={false} render={<Link href="/sign-in" />}>
+            Sign in to save your plan
           </Button>
+        ) : (
+          <>
+            <Button
+              type="button"
+              size="lg"
+              className="rounded-full text-lg"
+              disabled={!validation.valid || saveState.status === "saving"}
+              onClick={() => setNoteDialogOpen(true)}
+            >
+              {saveState.status === "saving" ? "Saving..." : saveState.status === "success" ? "Saved!" : "Save"}
+            </Button>
 
-          <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add a note? (optional)</DialogTitle>
-                <DialogDescription>
-                  A short note helps tell this plan apart from others you save later -- e.g. &quot;with Preferred meal
-                  plan&quot;.
-                </DialogDescription>
-              </DialogHeader>
+            <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add a note? (optional)</DialogTitle>
+                  <DialogDescription>
+                    A short note helps tell this plan apart from others you save later -- e.g. &quot;with Preferred
+                    meal plan&quot;.
+                  </DialogDescription>
+                </DialogHeader>
 
-              <div className="flex flex-col gap-1.5">
-                <textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value.slice(0, NOTE_MAX_LENGTH))}
-                  maxLength={NOTE_MAX_LENGTH}
-                  rows={3}
-                  placeholder="e.g. With Preferred meal plan and a Resident parking permit"
-                  className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                />
-                <span className="self-end text-xs text-muted-foreground">
-                  {note.length}/{NOTE_MAX_LENGTH}
-                </span>
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value.slice(0, NOTE_MAX_LENGTH))}
+                    maxLength={NOTE_MAX_LENGTH}
+                    rows={3}
+                    placeholder="e.g. With Preferred meal plan and a Resident parking permit"
+                    className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                  <span className="self-end text-xs text-muted-foreground">
+                    {note.length}/{NOTE_MAX_LENGTH}
+                  </span>
+                </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" className="rounded-full" onClick={() => setNoteDialogOpen(false)}>
-                  Cancel
-                </Button>
-                {/* Works whether or not a note was typed -- an empty note
-                    just saves with note: null, per the spec (note is
-                    optional, not required to save). */}
-                <Button type="button" className="rounded-full" onClick={handleSave}>
-                  Save
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
+                <DialogFooter>
+                  <Button type="button" variant="outline" className="rounded-full" onClick={() => setNoteDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  {/* Works whether or not a note was typed -- an empty note
+                      just saves with note: null, per the spec (note is
+                      optional, not required to save). */}
+                  <Button type="button" className="rounded-full" onClick={handleSave}>
+                    Save
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </div>
     </div>
   );
 }

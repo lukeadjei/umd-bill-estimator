@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
@@ -12,7 +12,13 @@ import { ProgressChecklist } from "@/components/dashboard/ProgressChecklist";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
 import { PanelNavArrows } from "@/components/dashboard/PanelNavArrows";
 import type { TabId } from "@/components/dashboard/tabs";
-import { DEFAULT_SELECTIONS, type DashboardSelections, type PanelProps } from "@/components/dashboard/selections";
+import {
+  DEFAULT_SELECTIONS,
+  readStoredSelections,
+  writeStoredSelections,
+  type DashboardSelections,
+  type PanelProps,
+} from "@/components/dashboard/selections";
 import { MajorPanel } from "@/components/dashboard/panels/MajorPanel";
 import { TuitionPanel } from "@/components/dashboard/panels/TuitionPanel";
 import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
@@ -110,8 +116,65 @@ export function DashboardShell({
   const [activeTab, setActiveTab] = useState<TabId>("major");
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["major"]));
   // initialSelections seeds this from a loaded ?scenario= (see dashboard/page.tsx)
-  // -- falls back to the empty defaults for a normal fresh visit.
+  // -- falls back to the empty defaults here; sessionStorage rehydration
+  // (below) happens in an effect, not here, on purpose -- see that effect's
+  // comment for why.
   const [selections, setSelections] = useState(initialSelections ?? DEFAULT_SELECTIONS);
+
+  // Tracks whether the rehydration effect below has run yet. This exists
+  // specifically to stop the write-effect (further down) from firing on the
+  // very first render, before rehydration has had a chance to apply --
+  // without this guard, that first write-effect run would write the fresh
+  // useState default (DEFAULT_SELECTIONS) straight over whatever real data
+  // was sitting in sessionStorage from before, clobbering it before the
+  // rehydrated value even had a chance to land. Confirmed this was a real
+  // bug, not theoretical, by testing an actual refresh and inspecting
+  // sessionStorage's contents directly.
+  const [hydrated, setHydrated] = useState(false);
+
+  // Rehydrates from sessionStorage after mount, not in the useState
+  // initializer above -- sessionStorage doesn't exist during server-side
+  // rendering, and reading it directly in the initializer would make the
+  // server's render and the client's first render disagree (a hydration
+  // mismatch), even with a try/catch preventing an actual crash. Running
+  // this in an effect means it only ever happens client-side, after
+  // hydration -- the standard, safe pattern for this. Skipped entirely when
+  // an explicit ?scenario= was loaded: that's a deliberate action and
+  // should win over whatever was left over from a previous visit.
+  useEffect(() => {
+    if (!initialSelections) {
+      const stored = readStoredSelections();
+      // Deliberate: the well-established "rehydrate from a browser-only
+      // external source after mount" pattern, specifically to avoid the
+      // hydration mismatch explained above. The lint rule's general concern
+      // (an extra render right after mount) is a real, known, accepted
+      // tradeoff for this exact case -- the same pattern most
+      // localStorage-persistence hooks in the React ecosystem use.
+      if (stored) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelections(stored);
+      }
+    }
+    // Both setState calls here are batched into one re-render (React 18+
+    // batches multiple setState calls within the same effect callback) --
+    // by the time the write-effect below sees hydrated flip to true, it
+    // also already sees the rehydrated selections in that exact same
+    // render, not a stale pre-rehydration value.
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately mount-only
+  }, []);
+
+  // Keeps sessionStorage in sync with every change, so a refresh or a
+  // navigation to/from the results page picks up right where this left off
+  // -- works identically for guests and signed-in users, no account
+  // involved. Gated on `hydrated` so this can never run before the
+  // rehydration effect above has had its result applied -- see that
+  // state's own comment for why this matters.
+  useEffect(() => {
+    if (!hydrated) return;
+    writeStoredSelections(selections);
+  }, [hydrated, selections]);
+
   const [chatOpen, setChatOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
 
