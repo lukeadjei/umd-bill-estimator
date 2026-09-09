@@ -94,6 +94,7 @@ Small, real to-dos that aren't a whole page/phase on their own — noted here so
 
 - [ ] **Scraper: fetch the real major list.** The dashboard's Major tab is currently a free-text input as a placeholder — needs the scraper to pull UMD's actual major list (and, later, which ones carry differential tuition) so it can become a real search/select. Not urgent, revisit after the dashboard's core selections are wired to real data.
 - [ ] **Revise the copy on `/privacy`, `/about`, and the 404 page.** The layout/design/structure is approved, but the actual wording was drafted by three parallel agents (2026-09-03) grounded in the project's real facts (RLS policy, scrape pipeline, etc.) — it hasn't had a human editing pass yet. Go through each page's text and rewrite/tighten anything that doesn't sound like how you'd actually say it before treating these as final.
+- [ ] **Review the sessionStorage persistence code in `DashboardShell.tsx`** (2026-09-08, `feat/print-page`). Flagged for your own understanding, not because it's broken — it's a real, non-trivial React pattern (rehydrating from a browser-only source without a hydration mismatch, plus a genuine race-condition bug that got caught and fixed where the write-effect could clobber real stored data with the fresh-mount default before rehydration landed). Exactly the kind of thing worth being able to explain in an interview. See the `hydrated`-state-gate comments in that file, and the 16:11 EDT entry in `PROGRESS-LOG.md` for the full story of how the bug was found.
 
 ---
 

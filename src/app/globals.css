@@ -157,3 +157,13 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Governs the actual paper size/margins for printing (and, identically,
+   "Save as PDF" -- browsers implement PDF export as a print destination,
+   not a separate code path, so this one rule covers both). Only the results
+   page (src/components/dashboard/results/ResultsShell.tsx) has meaningful
+   print-specific content -- everything else uses Tailwind's print:hidden. */
+@page {
+  size: letter;
+  margin: 0.75in;
+}

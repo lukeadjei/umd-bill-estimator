@@ -39,3 +39,34 @@ export type PanelProps = {
   spacious: boolean;
   rates: RatesBundle;
 };
+
+// sessionStorage (not localStorage) -- deliberately scoped to "until this
+// tab closes," matching the "temporary session" persistence this is for:
+// survives a refresh and navigating to/from the results page, but doesn't
+// linger indefinitely the way localStorage would, and isn't shared across
+// tabs. Guests and signed-in users both go through this the same way; it
+// has nothing to do with auth. Shared here (not duplicated in DashboardShell
+// and the results page separately) since both read this exact shape.
+const SELECTIONS_STORAGE_KEY = "umd-bill-estimator:selections";
+
+// Wrapped in try/catch: sessionStorage can throw in some contexts (private
+// browsing in a couple of browsers, storage disabled by policy) -- a failed
+// read/write here should just mean "no persistence this session," never a
+// crash.
+export function readStoredSelections(): DashboardSelections | null {
+  try {
+    const raw = sessionStorage.getItem(SELECTIONS_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as DashboardSelections;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredSelections(selections: DashboardSelections): void {
+  try {
+    sessionStorage.setItem(SELECTIONS_STORAGE_KEY, JSON.stringify(selections));
+  } catch {
+    // Non-fatal -- see readStoredSelections.
+  }
+}
