@@ -45,6 +45,30 @@ export type ParkingSelection = {
   term: string;
 };
 
+// A single user-entered miscellaneous grant/aid line -- unlike every other
+// selection in this file, this has no matching rate-table row behind it, the
+// user just types a dollar figure directly. `id` is a client-generated
+// (crypto.randomUUID()) stable key for React lists and for matching an entry
+// across edits -- never a database id.
+export type MiscGrant = {
+  id: string;
+  note: string;
+  amount: number;
+};
+
+// Financial aid the student is applying against their bill. All amounts are
+// raw dollar figures the user types in, not resolved against any RatesBundle
+// table -- 0 means "not entered" for the three named grants. Bounds
+// (non-negative, capped) are enforced at the input layer and again
+// server-side before a save, never here (CLAUDE.md rule 4 -- this type just
+// describes the shape, not what's legal).
+export type Grants = {
+  pell: number;
+  terrapinCommitment: number;
+  rawlingsEA: number;
+  misc: MiscGrant[];
+};
+
 export type Selections = {
   semester: Semester;
   // null means "hasn't been answered yet" -- distinct from any real choice.
@@ -63,6 +87,7 @@ export type Selections = {
   residentDiningPlan: ResidentDiningSelection | null;
   blockDiningPlan: BlockDiningSelection | null;
   parking: ParkingSelection | null;
+  grants: Grants;
 };
 
 // Whole reference dataset for one academic year, fetched once by the caller

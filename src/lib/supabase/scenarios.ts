@@ -1,6 +1,25 @@
 import { createAuthServerClient } from "./authServer";
-import type { RatesBundle, Residency } from "@/lib/calculator/types";
+import { MAX_MISC_GRANTS } from "@/lib/calculator/constants";
+import type { MiscGrant, RatesBundle, Residency } from "@/lib/calculator/types";
 import type { DashboardSelections } from "@/components/dashboard/selections";
+
+// Defensive, not just a cast -- misc_grants is a jsonb column, so its shape is
+// only ever as trustworthy as whatever was last written to it. Malformed or
+// unexpected entries are dropped rather than crashing the dashboard load,
+// consistent with this file's existing "fail closed" philosophy elsewhere.
+function parseMiscGrants(raw: unknown): MiscGrant[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+    .map(
+      (entry): MiscGrant => ({
+        id: typeof entry.id === "string" ? entry.id : crypto.randomUUID(),
+        note: typeof entry.note === "string" ? entry.note : "",
+        amount: typeof entry.amount === "number" ? entry.amount : 0,
+      })
+    )
+    .slice(0, MAX_MISC_GRANTS);
+}
 
 export type SavedScenario = {
   id: string;
@@ -97,5 +116,11 @@ export async function resolveScenarioToSelections(
     residentDiningPlan: residentPlanRow ? { planName: residentPlanRow.plan_name } : null,
     blockDiningPlan: blockPlanRow ? { planLabel: blockPlanRow.plan_label } : null,
     parking: parkingRow ? { permitType: parkingRow.permit_type, term: parkingRow.term } : null,
+    grants: {
+      pell: scenario.pell_grant_amount,
+      terrapinCommitment: scenario.terrapin_commitment_amount,
+      rawlingsEA: scenario.rawlings_ea_amount,
+      misc: parseMiscGrants(scenario.misc_grants),
+    },
   };
 }

@@ -23,6 +23,8 @@ const NOTE_MAX_LENGTH = 100;
 type SummaryBarProps = {
   semester: Semester;
   total: number;
+  aid: number;
+  netTotal: number;
   validation: { valid: boolean; errors: { field: string; message: string }[] };
   isSignedIn: boolean;
   selections: DashboardSelections;
@@ -42,10 +44,21 @@ function formatCurrency(value: number) {
 // in that state would be misleading. In that case we hide the dollar total,
 // disable the CTA, and surface the validation errors instead -- this is the
 // only place in the current UI those errors reach the user.
-export function SummaryBar({ semester, total, validation, isSignedIn, selections }: SummaryBarProps) {
+export function SummaryBar({ semester, total, aid, netTotal, validation, isSignedIn, selections }: SummaryBarProps) {
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [note, setNote] = useState("");
+  // Only meaningful once aid actually applies -- with no aid entered, before
+  // and after are identical, so the toggle itself stays hidden rather than
+  // offering a flip that changes nothing. Defaults to the after-aid view,
+  // since that's the figure that actually reflects what's owed.
+  const [showAfterAid, setShowAfterAid] = useState(true);
+  const displayTotal = aid > 0 && showAfterAid ? netTotal : total;
+  // Aid exceeding the gross total is a real refund, not an error -- surfaced
+  // as a positive figure with a distinct label/color rather than a
+  // confusing negative dollar amount (calculateNetTotal deliberately isn't
+  // floored at 0, see its own comment).
+  const isRefund = aid > 0 && showAfterAid && displayTotal < 0;
 
   async function handleSave() {
     setSaveState({ status: "saving" });
@@ -62,9 +75,32 @@ export function SummaryBar({ semester, total, validation, isSignedIn, selections
   return (
     <div className="sticky bottom-0 z-30 flex items-center justify-between gap-4 rounded-none border-t border-border bg-card/95 px-4 py-4 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] backdrop-blur md:px-6">
       <div>
-        <p className="text-sm text-muted-foreground">{semester === "fall" ? "Fall" : "Spring"} estimate</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground">
+            {semester === "fall" ? "Fall" : "Spring"} estimate
+            {aid > 0 && (showAfterAid ? " (after aid)" : " (before aid)")}
+          </p>
+          {aid > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 rounded-full px-2 text-xs text-muted-foreground"
+              onClick={() => setShowAfterAid((current) => !current)}
+            >
+              {showAfterAid ? "Show before aid" : "Show after aid"}
+            </Button>
+          )}
+        </div>
         {validation.valid ? (
-          <p className="font-heading text-3xl font-bold text-foreground">{formatCurrency(total)}</p>
+          isRefund ? (
+            <p className="font-heading text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+              +{formatCurrency(Math.abs(displayTotal))}
+              <span className="ml-2 text-base font-medium">Estimated refund</span>
+            </p>
+          ) : (
+            <p className="font-heading text-3xl font-bold text-foreground">{formatCurrency(displayTotal)}</p>
+          )
         ) : (
           <p className="font-heading text-3xl font-bold text-muted-foreground">Fix errors to see total</p>
         )}

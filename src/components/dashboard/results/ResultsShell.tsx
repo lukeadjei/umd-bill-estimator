@@ -14,7 +14,9 @@ import {
   calculateDining,
   calculateParking,
   calculateInsurance,
+  calculateAid,
   calculateTotal,
+  calculateNetTotal,
 } from "@/lib/calculator/calculateTotal";
 import { validateSelections } from "@/lib/calculator/validateSelections";
 
@@ -87,6 +89,24 @@ export function ResultsShell({ rates }: { rates: RatesBundle }) {
     { label: "Insurance", value: calculateInsurance(selections, rates) },
   ];
   const total = calculateTotal(selections, rates);
+  const aid = calculateAid(selections);
+  const netTotal = calculateNetTotal(selections, rates);
+  const isRefund = aid > 0 && netTotal < 0;
+
+  // Itemized so the bill shows exactly what was applied, not just a lump sum
+  // -- same reasoning as the breakdown rows above. Only entries with a
+  // nonzero amount show up; an untouched named grant or an emptied-out misc
+  // row shouldn't leave a "$0.00" line on the printed bill.
+  const aidRows: { label: string; value: number }[] = [
+    ...(selections.grants.pell > 0 ? [{ label: "Pell Grant", value: selections.grants.pell }] : []),
+    ...(selections.grants.terrapinCommitment > 0
+      ? [{ label: "Terrapin Commitment Grant", value: selections.grants.terrapinCommitment }]
+      : []),
+    ...(selections.grants.rawlingsEA > 0 ? [{ label: "Rawlings EA Grant", value: selections.grants.rawlingsEA }] : []),
+    ...selections.grants.misc
+      .filter((grant) => grant.amount > 0)
+      .map((grant) => ({ label: grant.note.trim() || "Miscellaneous grant", value: grant.amount })),
+  ];
 
   const generatedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
@@ -178,10 +198,32 @@ export function ResultsShell({ rates }: { rates: RatesBundle }) {
                   <td className="py-1.5 text-right">{formatCurrency(row.value)}</td>
                 </tr>
               ))}
-              <tr className="font-bold">
-                <td className="py-2 text-base">Total</td>
-                <td className="py-2 text-right text-base">{formatCurrency(total)}</td>
-              </tr>
+
+              {aidRows.length === 0 ? (
+                <tr className="font-bold">
+                  <td className="py-2 text-base">Total</td>
+                  <td className="py-2 text-right text-base">{formatCurrency(total)}</td>
+                </tr>
+              ) : (
+                <>
+                  <tr className="border-b border-black/10 font-semibold">
+                    <td className="py-2">Total before aid</td>
+                    <td className="py-2 text-right">{formatCurrency(total)}</td>
+                  </tr>
+                  {aidRows.map((row) => (
+                    <tr key={row.label} className="border-b border-black/10">
+                      <td className="py-1.5">{row.label}</td>
+                      <td className="py-1.5 text-right">-{formatCurrency(row.value)}</td>
+                    </tr>
+                  ))}
+                  <tr className={`font-bold ${isRefund ? "text-emerald-700" : ""}`}>
+                    <td className="py-2 text-base">Total after aid{isRefund ? " (estimated refund)" : ""}</td>
+                    <td className="py-2 text-right text-base">
+                      {isRefund ? `+${formatCurrency(Math.abs(netTotal))}` : formatCurrency(netTotal)}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </section>

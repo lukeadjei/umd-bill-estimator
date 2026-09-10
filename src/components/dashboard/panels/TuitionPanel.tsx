@@ -1,9 +1,11 @@
 "use client";
 
+import { TriangleAlertIcon } from "lucide-react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { Button } from "@/components/ui/button";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import { majorHasDifferentialTuition } from "@/lib/calculator/majors";
 import type { EducationLevel, Residency } from "@/lib/calculator/types";
 import type { PanelProps } from "@/components/dashboard/selections";
 
@@ -25,8 +27,13 @@ function markPosition(value: number) {
 const NEUTRAL_CREDIT_HOURS_DISPLAY = 12;
 
 export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
-  const { educationLevel, residency, creditHours, appliesDifferentialTuition, insurance } = selections;
+  const { major, educationLevel, residency, creditHours, appliesDifferentialTuition, insurance } = selections;
   const t = panelTextSizes(spacious);
+  // Only nag when it'd actually change something useful: a major that's
+  // known to carry differential tuition, and the toggle isn't already on.
+  // Once they've said Yes, or picked a major that doesn't carry it, or
+  // haven't picked a major at all, there's nothing to warn about.
+  const showDifferentialTuitionWarning = majorHasDifferentialTuition(major) && !appliesDifferentialTuition;
   const creditHoursTouched = creditHours !== null;
   const displayCreditHours = creditHours ?? NEUTRAL_CREDIT_HOURS_DISPLAY;
 
@@ -136,12 +143,13 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <span className={`font-medium text-foreground ${t.label}`}>Applies differential tuition</span>
-            <p className={`text-muted-foreground ${t.hint}`}>
-              Auto-detected from major once that&apos;s wired up -- manual for now.
+            <span className={`font-medium text-foreground ${t.body}`}>Applies differential tuition</span>
+            <p className={`text-muted-foreground ${t.label}`}>
+              An extra per-credit or flat charge on top of standard tuition, billed to juniors and seniors in
+              certain majors.
             </p>
           </div>
           <Button
@@ -155,10 +163,23 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
           </Button>
         </div>
 
+        {/* Prominent, not just a hint -- this is a "you're probably about to
+            under-estimate your bill" warning, not a neutral tip, so it gets
+            its own high-contrast callout instead of PanelTip's muted styling. */}
+        {showDifferentialTuitionWarning && (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+            <TriangleAlertIcon className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className={`font-medium text-amber-800 dark:text-amber-300 ${t.label}`}>
+              {major} normally pays differential tuition. We recommend selecting &quot;Yes&quot; above unless you
+              know yours is being waived.
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-4">
           <div>
-            <span className={`font-medium text-foreground ${t.label}`}>Student health insurance</span>
-            <p className={`text-muted-foreground ${t.hint}`}>Opt in if you don&apos;t have a waiver on file.</p>
+            <span className={`font-medium text-foreground ${t.body}`}>Student health insurance</span>
+            <p className={`text-muted-foreground ${t.label}`}>Opt in if you don&apos;t have a waiver on file.</p>
           </div>
           <Button
             type="button"
