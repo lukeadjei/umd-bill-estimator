@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
+import { TriangleAlertIcon, XIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { ChatPanel } from "@/components/dashboard/ChatPanel";
@@ -109,6 +111,7 @@ export function DashboardShell({
   userName,
   avatarUrl,
   initialSelections,
+  lockedScenarioMessage,
 }: {
   academicYearLabel: string;
   rates: RatesBundle;
@@ -116,7 +119,14 @@ export function DashboardShell({
   userName: string | null;
   avatarUrl: string | null;
   initialSelections?: DashboardSelections | null;
+  lockedScenarioMessage?: string | null;
 }) {
+  // Dismissible, not just a fixed banner -- once someone's read it there's no
+  // reason to keep taking up space for the rest of the session. Re-derived
+  // from the prop on every navigation to a new ?scenario=<id> (a fresh page
+  // load, since this whole component remounts), so it isn't "stuck dismissed"
+  // for a genuinely new locked-scenario message.
+  const [lockedMessageDismissed, setLockedMessageDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("major");
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["major"]));
   // initialSelections seeds this from a loaded ?scenario= (see dashboard/page.tsx)
@@ -229,6 +239,23 @@ export function DashboardShell({
         </div>
         <p className="text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
       </div>
+
+      {lockedScenarioMessage && !lockedMessageDismissed && (
+        <div className="mx-4 mb-2 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 md:mx-8">
+          <TriangleAlertIcon className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="flex-1 text-sm font-medium text-amber-800 dark:text-amber-300">{lockedScenarioMessage}</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0 rounded-full text-amber-800 dark:text-amber-300"
+            onClick={() => setLockedMessageDismissed(true)}
+            aria-label="Dismiss"
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
+      )}
 
       <DashboardNav
         activeTab={activeTab}

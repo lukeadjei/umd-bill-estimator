@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "scrape": "tsx --env-file=.env.local scraper/index.ts",
-    "promote": "tsx --env-file=.env.local scraper/promote.ts"
+    "promote": "tsx --env-file=.env.local scraper/promote.ts",
+    "academic-year:create": "tsx --env-file=.env.local scraper/createAcademicYear.ts",
+    "academic-year:activate": "tsx --env-file=.env.local scraper/activateAcademicYear.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { XIcon } from "lucide-react";
+import { PrinterIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -56,66 +56,109 @@ function SavedScenarioRow({ scenario }: { scenario: SavedScenario }) {
     }
   }
 
+  // pr-24 leaves room for the two action buttons (Generate PDF + delete)
+  // that sit in the absolutely-positioned group in the top-right corner --
+  // both are siblings of this content, never nested inside the edit Link,
+  // since a <button> inside an <a> is invalid markup and would double-fire
+  // on click.
+  const rowContentClassName =
+    "flex items-center justify-between gap-4 rounded-none bg-card/85 p-4 pr-24 ring-1 ring-foreground/10 shadow-[-5px_8px_16px_-3px_rgba(0,0,0,0.28)]";
+
+  const rowContent = (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-base font-medium text-foreground">{scenario.name}</span>
+      {scenario.note ? <span className="text-xs italic text-muted-foreground">{scenario.note}</span> : null}
+      <span className="text-sm text-muted-foreground">
+        {formatDate(scenario.createdAt)}
+        {!scenario.isCurrentYear && (
+          <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            {scenario.academicYearLabel} -- view only
+          </span>
+        )}
+      </span>
+    </div>
+  );
+
   return (
     <li className="relative">
-      {/* pr-12 so the absolutely positioned delete button (below) never sits
-          on top of the total, even for a long dollar figure. The delete
-          button is a sibling of this Link, not nested inside it -- a
-          <button> inside an <a> is invalid markup and would double-fire on
-          click (both the navigation and the delete dialog). */}
-      <Link
-        href={`/dashboard?scenario=${scenario.id}`}
-        className="flex items-center justify-between gap-4 rounded-none bg-card/85 p-4 pr-12 ring-1 ring-foreground/10 shadow-[-5px_8px_16px_-3px_rgba(0,0,0,0.28)] transition-colors hover:bg-card hover:ring-foreground/20"
-      >
-        <div className="flex flex-col gap-0.5">
-          <span className="text-base font-medium text-foreground">{scenario.name}</span>
-          {scenario.note ? <span className="text-xs italic text-muted-foreground">{scenario.note}</span> : null}
-          <span className="text-sm text-muted-foreground">{formatDate(scenario.createdAt)}</span>
-        </div>
-        <span className="font-heading text-lg font-semibold text-foreground">
-          {formatCurrency(scenario.computedTotal)}
-        </span>
-      </Link>
-
-      <AlertDialog>
-        <AlertDialogTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute top-3 right-3 rounded-full text-muted-foreground hover:text-destructive"
-              aria-label={`Delete ${scenario.name}`}
-            />
-          }
+      {/* Current year: the whole card is a Link into the editable dashboard,
+          same as before this feature. Past year: editing isn't offered at
+          all here -- resolveScenarioForEditing blocks it server-side
+          regardless, but there's no reason to show a link that would just
+          bounce the user back with a locked message when we already know
+          that here. */}
+      {scenario.isCurrentYear ? (
+        <Link
+          href={`/dashboard?scenario=${scenario.id}`}
+          className={`${rowContentClassName} transition-colors hover:bg-card hover:ring-foreground/20`}
         >
-          <XIcon className="size-4" />
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete &quot;{scenario.name}&quot;?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes this saved scenario from your account. This can&apos;t be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError && <p className="text-xs font-medium text-destructive">{deleteError}</p>}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleConfirmDelete} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {rowContent}
+          <span className="font-heading text-lg font-semibold text-foreground">
+            {formatCurrency(scenario.computedTotal)}
+          </span>
+        </Link>
+      ) : (
+        <div className={rowContentClassName}>
+          {rowContent}
+          <span className="font-heading text-lg font-semibold text-foreground">
+            {formatCurrency(scenario.computedTotal)}
+          </span>
+        </div>
+      )}
+
+      {/* Generate PDF: always available, current year or not -- viewing/
+          printing an old estimate never touches the database, so there's no
+          reason to gate it the way editing is gated. */}
+      <div className="absolute top-3 right-3 flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="rounded-full text-muted-foreground hover:text-foreground"
+          nativeButton={false}
+          render={<Link href={`/dashboard/results?scenario=${scenario.id}`} />}
+          aria-label={`Generate PDF for ${scenario.name}`}
+        >
+          <PrinterIcon className="size-4" />
+        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-muted-foreground hover:text-destructive"
+                aria-label={`Delete ${scenario.name}`}
+              />
+            }
+          >
+            <XIcon className="size-4" />
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete &quot;{scenario.name}&quot;?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes this saved scenario from your account. This can&apos;t be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {deleteError && <p className="text-xs font-medium text-destructive">{deleteError}</p>}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" onClick={handleConfirmDelete} disabled={deleting}>
+                {deleting ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </li>
   );
 }
 
 // The array arrives newest-first (already sorted by the query in
 // getUserScenarios), so this doesn't re-sort it.
-// Each row links to /dashboard?scenario=<id>, which loads that scenario's
-// saved selections back into the dashboard, plus a per-row delete button
-// (see SavedScenarioRow).
 export function SavedScenariosPanel({ scenarios }: { scenarios: SavedScenario[] }) {
   if (scenarios.length === 0) {
     return (
