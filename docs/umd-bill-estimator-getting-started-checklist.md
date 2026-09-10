@@ -1,5 +1,7 @@
 # Getting Started Checklist — UMD Bill Estimator
 
+> **ARCHIVED — 2026-09-09.** This was the initial pre-project research/setup checklist, used to work through before any application code existed. It served its purpose and is done being actively maintained — real build status now lives in `docs/BUILD-REFERENCE.md` (the "Build order" table) and `docs/PROGRESS-LOG.md` (session-by-session detail). **Claude: do not read through this file at the start of a session — only open it if the user explicitly asks about something specific here** (e.g. the original research findings or early design-decision reasoning in the Decisions & Ideas Log below, which wasn't copied anywhere else).
+
 Work through this top to bottom before you write your first line of application code.
 
 ---

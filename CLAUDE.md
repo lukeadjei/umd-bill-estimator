@@ -68,9 +68,15 @@ Rule of thumb: if it's something an interviewer could plausibly ask him to expla
 
 ## Where to find more context
 
-- `docs/PLAN.md` — full project plan, sprint breakdown, professional-workflow notes
-- `docs/DECISIONS.md` — running log of research findings and design decisions with reasoning
+**Check these two first, every session — they're the live cross-machine status:**
+- `docs/BUILD-REFERENCE.md` — the "Build order" table at the bottom is the canonical "where am I" status (Done/Partial/Not started per step), kept current whenever a work-order decision is made or a step's status changes.
+- `docs/PROGRESS-LOG.md` — dated, append-only session-by-session detail behind that table (the *why* and *how*, not just the *what*).
+
+**Reference only as needed:**
 - `docs/HOUSING-DINING-RULES.md` — housing/dining eligibility rules in detail
 - `docs/PARKING-RULES.md` — parking permit types and rules in detail
 - `docs/DATA-SOURCES.md` — every scrape source URL, organized by category
-- `docs/BUILD-REFERENCE.md` — condensed build order and stack summary
+
+**Archived, do not read unless explicitly asked:**
+- `docs/umd-bill-estimator-getting-started-checklist.md` — the original pre-project research/setup checklist. Served its purpose getting the project off the ground; superseded by the two files above once real build work started. Marked archived at the top of the file itself too.
+- `docs/PLAN.md` / `docs/DECISIONS.md` — referenced by older material but never created as literal files; that content lives inside the now-archived checklist instead. Not a gap to fix unless asked.

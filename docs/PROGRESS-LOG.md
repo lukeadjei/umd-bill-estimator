@@ -4,6 +4,11 @@ Dated, append-only record of what actually got done, one entry per work session.
 
 ---
 
+### 2026-09-09
+
+- **The real signed-in session, confirmed at last — the one thing every prior entry for steps 9/9a/9b flagged as "needs the user's actual session, not something to fake."** On a different machine than the one that built the save/settings/OAuth work, actually clicked through a real Google login (not just the redirect-to-Google check from 2026-09-05), landed back on `/dashboard` with a real session, and confirmed: save (with a note) writes a real row, the saved scenario appears in Settings' Saved Scenarios list with the correct name/note/total/date, loading it back via `?scenario=<id>` restores the exact selections, and the Settings page itself renders real account data (avatar, name/email) rather than the guest/placeholder state. Closes out the last open verification gap on steps 9, 9a, and 9b — all three now read "Done" without caveats in `BUILD-REFERENCE.md`.
+- **Docs cross-machine housekeeping:** confirmed `docs/BUILD-REFERENCE.md`'s Build Order table (added 2026-09-03 as the canonical status tracker) and this log are the two files that actually stay current — `docs/umd-bill-estimator-getting-started-checklist.md` was the original pre-code research/setup checklist and has drifted stale (still describes several pages as screen-only, long since wired to real data). Archived it with a banner at the top rather than deleting it — the Decisions & Ideas Log inside it has real research reasoning that was never copied anywhere else. `CLAUDE.md`'s "Where to find more context" section updated to point at `BUILD-REFERENCE.md`/`PROGRESS-LOG.md` first and flag the checklist as archived, so this doesn't have to be rediscovered on some future machine/session.
+
 ### 2026-09-08 (16:11 EDT)
 
 - **Results/print page built (step 10).** Planned as a teaching conversation first (print/PDF is one mechanism, not two -- `@page` + Tailwind's `print:` variant, since "Save as PDF" is just a print destination; `sessionStorage` for cross-navigation/refresh persistence, explained as the actual named browser feature behind "temporary session"), then confirmed with an explicit go-ahead before any code was written.
