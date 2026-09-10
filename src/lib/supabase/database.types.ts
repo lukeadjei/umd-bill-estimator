@@ -700,11 +700,15 @@ export type Database = {
           insurance_selected: boolean
           living_situation: string
           major: string | null
+          misc_grants: Json
           name: string
           note: string | null
           parking_permit_id: string | null
+          pell_grant_amount: number
+          rawlings_ea_amount: number
           resident_dining_plan_id: string | null
           semester: string
+          terrapin_commitment_amount: number
           tuition_rate_id: string | null
           updated_at: string
           user_id: string
@@ -722,11 +726,15 @@ export type Database = {
           insurance_selected?: boolean
           living_situation: string
           major?: string | null
+          misc_grants?: Json
           name: string
           note?: string | null
           parking_permit_id?: string | null
+          pell_grant_amount?: number
+          rawlings_ea_amount?: number
           resident_dining_plan_id?: string | null
           semester: string
+          terrapin_commitment_amount?: number
           tuition_rate_id?: string | null
           updated_at?: string
           user_id: string
@@ -744,11 +752,15 @@ export type Database = {
           insurance_selected?: boolean
           living_situation?: string
           major?: string | null
+          misc_grants?: Json
           name?: string
           note?: string | null
           parking_permit_id?: string | null
+          pell_grant_amount?: number
+          rawlings_ea_amount?: number
           resident_dining_plan_id?: string | null
           semester?: string
+          terrapin_commitment_amount?: number
           tuition_rate_id?: string | null
           updated_at?: string
           user_id?: string

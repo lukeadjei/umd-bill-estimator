@@ -11,6 +11,7 @@ type CostBreakdownProps = {
     meals: number;
     parking: number;
     insurance: number;
+    aid: number;
   };
 };
 
@@ -44,6 +45,15 @@ export function CostBreakdown({ semester, values }: CostBreakdownProps) {
             </span>
           </li>
         ))}
+        {/* Only shown once aid actually applies -- the fixed categories above
+            always render (even at $0), but an "Aid: $0.00" row for every
+            visitor who's never touched that tab would just be noise. */}
+        {values.aid > 0 && (
+          <li className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Aid</span>
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">-{formatCurrency(values.aid)}</span>
+          </li>
+        )}
       </ul>
     </div>
   );

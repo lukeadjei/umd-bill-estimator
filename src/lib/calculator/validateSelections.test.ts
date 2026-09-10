@@ -16,6 +16,7 @@ const baseOnCampus: Selections = {
   residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
+  grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 
 const baseCommuter: Selections = {
@@ -68,6 +69,7 @@ describe("validateSelections -- required fields not yet answered", () => {
     residentDiningPlan: null,
     blockDiningPlan: null,
     parking: null,
+    grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
   };
 
   it("reports every always-required field for a brand-new, untouched selection", () => {

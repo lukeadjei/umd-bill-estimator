@@ -2,7 +2,9 @@
 
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
+import { SelectionDetail } from "@/components/dashboard/SelectionDetail";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import { PERMIT_TYPE_DESCRIPTIONS } from "@/lib/content/parkingDescriptions";
 import type { PanelProps } from "@/components/dashboard/selections";
 
 // permit_type is a plain `string` column (see ParkingPermitRow / RatesBundle
@@ -54,6 +56,9 @@ export function ParkingPanel({ selections, onChange, spacious, rates }: PanelPro
             ...permitTypeOptions.map((value) => ({ value, label: value })),
           ]}
         />
+        {permitType !== "none" && PERMIT_TYPE_DESCRIPTIONS[permitType] && (
+          <SelectionDetail spacious={spacious}>{PERMIT_TYPE_DESCRIPTIONS[permitType]}</SelectionDetail>
+        )}
       </div>
 
       {permitType !== "none" && (

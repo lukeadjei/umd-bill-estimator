@@ -26,6 +26,7 @@ export const DEFAULT_SELECTIONS: DashboardSelections = {
   residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
+  grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 
 // Every tab panel gets the same three props: the full selections object (a

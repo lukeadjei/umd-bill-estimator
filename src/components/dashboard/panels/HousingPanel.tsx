@@ -2,7 +2,9 @@
 
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
+import { SelectionDetail } from "@/components/dashboard/SelectionDetail";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import { BUILDING_CATEGORY_DESCRIPTIONS, ROOM_TYPE_DESCRIPTIONS } from "@/lib/content/housingDescriptions";
 import type { HousingRateRow, LivingSituation } from "@/lib/calculator/types";
 import type { PanelProps } from "@/components/dashboard/selections";
 
@@ -94,6 +96,9 @@ export function HousingPanel({ selections, onChange, spacious, rates }: PanelPro
               spacious={spacious}
               options={roomTypeOptions}
             />
+            {ROOM_TYPE_DESCRIPTIONS[roomType] && (
+              <SelectionDetail spacious={spacious}>{ROOM_TYPE_DESCRIPTIONS[roomType]}</SelectionDetail>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -105,12 +110,11 @@ export function HousingPanel({ selections, onChange, spacious, rates }: PanelPro
               spacious={spacious}
               options={buildingCategoryOptions}
             />
-            {/* Only Apartment has a kitchen -- the Meals tab's dining-plan
-                requirement is exempt for this category. Not enforced here. */}
-            {buildingCategory === "Apartment" && (
-              <p className={`text-muted-foreground ${t.hint}`}>
-                Apartments have a kitchen -- a dining plan won&apos;t be required on the Meals tab.
-              </p>
+            {/* Apartment's own description (below) already covers the
+                kitchen/no-dining-plan-required detail -- see
+                housingDescriptions.ts. */}
+            {BUILDING_CATEGORY_DESCRIPTIONS[buildingCategory] && (
+              <SelectionDetail spacious={spacious}>{BUILDING_CATEGORY_DESCRIPTIONS[buildingCategory]}</SelectionDetail>
             )}
           </div>
         </>

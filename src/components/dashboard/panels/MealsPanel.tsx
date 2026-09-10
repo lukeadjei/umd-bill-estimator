@@ -2,7 +2,9 @@
 
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
+import { SelectionDetail } from "@/components/dashboard/SelectionDetail";
 import { panelTextSizes } from "@/components/dashboard/typography";
+import { describeBlockPlan, describeResidentPlan } from "@/lib/content/mealsDescriptions";
 import type { PanelProps } from "@/components/dashboard/selections";
 
 type PlanMode = "resident" | "block" | "none";
@@ -31,6 +33,13 @@ export function MealsPanel({ selections, onChange, spacious, rates }: PanelProps
   const residentTier = selections.residentDiningPlan?.planName ?? "Base";
   const blockTier = selections.blockDiningPlan?.planLabel ?? "1";
   const t = panelTextSizes(spacious);
+
+  // Looked up by name/label against the real rows (not hardcoded per tier)
+  // so the description composed from them (see mealsDescriptions.ts) can
+  // never drift out of sync with the actual dining-dollars/guest-pass/
+  // meal-count numbers.
+  const selectedResidentRow = rates.residentDiningPlans.find((row) => row.plan_name === residentTier);
+  const selectedBlockRow = blockTierRows.find((row) => row.plan_label === blockTier);
 
   function handlePlanChange(value: PlanMode) {
     if (value === "resident") onChange({ residentDiningPlan: { planName: residentTier }, blockDiningPlan: null });
@@ -72,6 +81,9 @@ export function MealsPanel({ selections, onChange, spacious, rates }: PanelProps
             spacious={spacious}
             options={residentTierNames.map((name) => ({ value: name, label: name }))}
           />
+          {selectedResidentRow && (
+            <SelectionDetail spacious={spacious}>{describeResidentPlan(selectedResidentRow)}</SelectionDetail>
+          )}
         </div>
       )}
 
@@ -89,6 +101,7 @@ export function MealsPanel({ selections, onChange, spacious, rates }: PanelProps
               return { value: row.plan_label, label: `${displayName} -- ${row.meal_count} meals${diningDollars}` };
             })}
           />
+          {selectedBlockRow && <SelectionDetail spacious={spacious}>{describeBlockPlan(selectedBlockRow)}</SelectionDetail>}
         </div>
       )}
 

@@ -24,6 +24,7 @@ import { TuitionPanel } from "@/components/dashboard/panels/TuitionPanel";
 import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
 import { ParkingPanel } from "@/components/dashboard/panels/ParkingPanel";
 import { MealsPanel } from "@/components/dashboard/panels/MealsPanel";
+import { AidPanel } from "@/components/dashboard/panels/AidPanel";
 import type { RatesBundle } from "@/lib/calculator/types";
 import {
   calculateTuition,
@@ -33,7 +34,9 @@ import {
   calculateDining,
   calculateParking,
   calculateInsurance,
+  calculateAid,
   calculateTotal,
+  calculateNetTotal,
 } from "@/lib/calculator/calculateTotal";
 import { validateSelections } from "@/lib/calculator/validateSelections";
 
@@ -43,6 +46,7 @@ const PANELS: Record<TabId, ComponentType<PanelProps>> = {
   housing: HousingPanel,
   parking: ParkingPanel,
   meals: MealsPanel,
+  aid: AidPanel,
 };
 
 // Positions and rotation angles are hand-jittered (arbitrary degree values,
@@ -188,6 +192,8 @@ export function DashboardShell({
   const parking = calculateParking(selections, rates);
   const insurance = calculateInsurance(selections, rates);
   const total = calculateTotal(selections, rates);
+  const aid = calculateAid(selections);
+  const netTotal = calculateNetTotal(selections, rates);
   const validationResult = validateSelections(selections);
 
   function handleTabChange(tab: TabId) {
@@ -213,13 +219,15 @@ export function DashboardShell({
       {/* Same font as the homepage's h1, at a scale that fits a persistent
           bar instead of a hero. */}
       <div className="px-4 pt-6 pb-2 text-center md:px-8 md:pt-8 md:text-left">
-        <h1 className="font-spicy-rice text-2xl tracking-wider text-foreground [text-shadow:0_0_10px_rgba(0,0,0,0.35)] md:text-3xl">
-          UMD Bill Estimator
-        </h1>
+        <div className="flex flex-col items-center justify-between gap-1 md:flex-row md:items-baseline md:gap-4">
+          <h1 className="font-spicy-rice text-2xl tracking-wider text-foreground [text-shadow:0_0_10px_rgba(0,0,0,0.35)] md:text-3xl">
+            UMD Bill Estimator
+          </h1>
+          {isSignedIn && userName !== null && (
+            <p className="text-lg font-medium text-foreground/80">Welcome back, {userName}</p>
+          )}
+        </div>
         <p className="text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
-        {isSignedIn && userName !== null && (
-          <p className="text-sm text-foreground/60">Welcome back, {userName}</p>
-        )}
       </div>
 
       <DashboardNav
@@ -244,12 +252,14 @@ export function DashboardShell({
 
           <CostBreakdown
             semester={selections.semester}
-            values={{ tuition, fees, housing, meals, parking, insurance }}
+            values={{ tuition, fees, housing, meals, parking, insurance, aid }}
           />
 
           <SummaryBar
             semester={selections.semester}
             total={total}
+            aid={aid}
+            netTotal={netTotal}
             validation={validationResult}
             isSignedIn={isSignedIn}
             selections={selections}

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateAid,
   calculateDifferentialTuition,
   calculateDining,
   calculateFees,
   calculateHousing,
   calculateInsurance,
+  calculateNetTotal,
   calculateParking,
   calculateTotal,
   calculateTuition,
@@ -60,6 +62,7 @@ const baseSelections: Selections = {
   residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
+  grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 
 describe("calculateTuition", () => {
@@ -237,6 +240,7 @@ describe("calculateTotal", () => {
       residentDiningPlan: { planName: "Base" },
       blockDiningPlan: null,
       parking: { permitType: "Commuter", term: "annual" },
+      grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
     };
 
     const expected =
@@ -264,6 +268,7 @@ describe("calculateTotal", () => {
       residentDiningPlan: { planName: "Base" },
       blockDiningPlan: null,
       parking: null,
+      grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
     };
     const springSelections: Selections = { ...fallSelections, semester: "spring" };
 
@@ -288,7 +293,62 @@ describe("calculateTotal", () => {
       residentDiningPlan: null,
       blockDiningPlan: null,
       parking: null,
+      grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
     };
     expect(calculateTotal(untouched, rates)).toBe(0);
+  });
+});
+
+describe("calculateAid", () => {
+  it("is $0 when nothing has been entered", () => {
+    expect(calculateAid(baseSelections)).toBe(0);
+  });
+
+  it("sums the three named grants", () => {
+    const selections: Selections = {
+      ...baseSelections,
+      grants: { pell: 3000, terrapinCommitment: 2500, rawlingsEA: 1000, misc: [] },
+    };
+    expect(calculateAid(selections)).toBe(6500);
+  });
+
+  it("sums every misc grant alongside the named ones", () => {
+    const selections: Selections = {
+      ...baseSelections,
+      grants: {
+        pell: 1000,
+        terrapinCommitment: 0,
+        rawlingsEA: 0,
+        misc: [
+          { id: "m1", note: "Departmental scholarship", amount: 500 },
+          { id: "m2", note: "Outside scholarship", amount: 250 },
+        ],
+      },
+    };
+    expect(calculateAid(selections)).toBe(1750);
+  });
+});
+
+describe("calculateNetTotal", () => {
+  it("equals calculateTotal when no aid has been entered", () => {
+    expect(calculateNetTotal(baseSelections, rates)).toBe(calculateTotal(baseSelections, rates));
+  });
+
+  it("subtracts aid from the gross total", () => {
+    const selections: Selections = {
+      ...baseSelections,
+      grants: { pell: 5000, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
+    };
+    // baseSelections' gross total is 10000 (tuition) + 1800 (fees) = 11800.
+    expect(calculateNetTotal(selections, rates)).toBe(11800 - 5000);
+  });
+
+  it("goes negative (a refund) when aid exceeds the gross total, without being floored at 0", () => {
+    const selections: Selections = {
+      ...baseSelections,
+      grants: { pell: 20000, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
+    };
+    expect(calculateNetTotal(selections, rates)).toBe(11800 - 20000);
+    expect(calculateNetTotal(selections, rates)).toBeLessThan(0);
   });
 });

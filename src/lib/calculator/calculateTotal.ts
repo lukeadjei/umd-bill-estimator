@@ -134,7 +134,9 @@ export function calculateParking(selections: Selections, rates: RatesBundle): nu
 }
 
 // One semester's total (fall or spring, per selections.semester) -- not the full year.
-// Sole source of a final dollar total (CLAUDE.md rule 1); summing two calls (fall + spring)
+// This is the billed (gross) total, before any aid -- the sole pricing path for
+// every rate-table-backed category (CLAUDE.md rule 1: no AI/UI code path invents
+// a dollar figure independently of this module). Summing two calls (fall + spring)
 // gets the annual figure, a separate concern for later.
 export function calculateTotal(selections: Selections, rates: RatesBundle): number {
   return (
@@ -146,4 +148,23 @@ export function calculateTotal(selections: Selections, rates: RatesBundle): numb
     calculateDining(selections, rates) +
     calculateParking(selections, rates)
   );
+}
+
+// Grants/aid are raw dollar amounts the user types in directly -- no rate
+// table behind them, unlike every category above. Sums whatever is currently
+// in state; bounds (non-negative, capped) are enforced at input time and
+// again server-side before a save, never here -- same "price whatever's
+// selected, validity is a separate concern" split as every calculate*
+// function above (CLAUDE.md rule 4).
+export function calculateAid(selections: Selections): number {
+  const { grants } = selections;
+  const miscTotal = grants.misc.reduce((sum, grant) => sum + grant.amount, 0);
+  return grants.pell + grants.terrapinCommitment + grants.rawlingsEA + miscTotal;
+}
+
+// The billed total minus aid applied. Deliberately not floored at 0 -- aid
+// exceeding the billed total is a real refund, not an error state (see
+// SummaryBar/ResultsShell for how a negative value is surfaced to the user).
+export function calculateNetTotal(selections: Selections, rates: RatesBundle): number {
+  return calculateTotal(selections, rates) - calculateAid(selections);
 }

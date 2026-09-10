@@ -5,6 +5,13 @@ import { getServerUser } from "@/lib/supabase/authServer";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
 import { validateSelections } from "@/lib/calculator/validateSelections";
 import { calculateTotal } from "@/lib/calculator/calculateTotal";
+import {
+  MAX_MISC_GRANTS,
+  MISC_GRANT_MAX_AMOUNT,
+  MISC_GRANT_NOTE_MAX_LENGTH,
+  NAMED_GRANT_MAX_AMOUNT,
+  isValidGrantAmount,
+} from "@/lib/calculator/constants";
 import type { DashboardSelections } from "@/components/dashboard/selections";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -33,6 +40,48 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
   const trimmedNote = note?.trim() || null;
   if (trimmedNote && trimmedNote.length > 100) {
     return { success: false, error: "Note must be 100 characters or fewer." };
+  }
+
+  // Same never-trust-the-client re-check as the note above, for every grant
+  // amount -- the AidPanel's own input clamping is a UI convenience, not a
+  // security/data-integrity boundary. Untouched misc rows (never given a
+  // note or an amount) are dropped rather than rejected -- they're not an
+  // error, just nothing the user actually filled in.
+  const cleanedMiscGrants = selections.grants.misc
+    .map((grant) => ({ ...grant, note: grant.note.trim() }))
+    .filter((grant) => grant.amount > 0 || grant.note.length > 0);
+
+  if (cleanedMiscGrants.length > MAX_MISC_GRANTS) {
+    return { success: false, error: `No more than ${MAX_MISC_GRANTS} miscellaneous grants are allowed.` };
+  }
+  if (!isValidGrantAmount(selections.grants.pell, NAMED_GRANT_MAX_AMOUNT)) {
+    return { success: false, error: `Pell Grant must be between $1 and $${NAMED_GRANT_MAX_AMOUNT.toLocaleString()}.` };
+  }
+  if (!isValidGrantAmount(selections.grants.terrapinCommitment, NAMED_GRANT_MAX_AMOUNT)) {
+    return {
+      success: false,
+      error: `Terrapin Commitment Grant must be between $1 and $${NAMED_GRANT_MAX_AMOUNT.toLocaleString()}.`,
+    };
+  }
+  if (!isValidGrantAmount(selections.grants.rawlingsEA, NAMED_GRANT_MAX_AMOUNT)) {
+    return {
+      success: false,
+      error: `Rawlings EA Grant must be between $1 and $${NAMED_GRANT_MAX_AMOUNT.toLocaleString()}.`,
+    };
+  }
+  for (const grant of cleanedMiscGrants) {
+    if (!isValidGrantAmount(grant.amount, MISC_GRANT_MAX_AMOUNT)) {
+      return {
+        success: false,
+        error: `Each miscellaneous grant must be between $1 and $${MISC_GRANT_MAX_AMOUNT.toLocaleString()}.`,
+      };
+    }
+    if (grant.note.length > MISC_GRANT_NOTE_MAX_LENGTH) {
+      return {
+        success: false,
+        error: `Miscellaneous grant notes must be ${MISC_GRANT_NOTE_MAX_LENGTH} characters or fewer.`,
+      };
+    }
   }
 
   // Past this point, validateSelections guarantees educationLevel, residency,
@@ -105,6 +154,10 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
       block_dining_plan_id: blockDiningPlanId,
       parking_permit_id: parkingPermitId,
       computed_total: computedTotal,
+      pell_grant_amount: selections.grants.pell,
+      terrapin_commitment_amount: selections.grants.terrapinCommitment,
+      rawlings_ea_amount: selections.grants.rawlingsEA,
+      misc_grants: cleanedMiscGrants,
     })
     .select("id")
     .single();
