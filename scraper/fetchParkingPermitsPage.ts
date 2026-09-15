@@ -2,7 +2,7 @@ import {
   COMMUTER_PARKING_PERMIT_TYPE,
   OVERNIGHT_STORAGE_PARKING_PERMIT_TYPE,
   RESIDENT_PARKING_PERMIT_TYPE,
-} from "@/lib/calculator/constants";
+} from "../src/lib/calculator/constants";
 import { fetchAndLoad } from "./fetchHtml";
 import { parseDollarAmount } from "./parseUtils";
 import type { ParkingPermitsPageData, ScrapedParkingPermit } from "./types";

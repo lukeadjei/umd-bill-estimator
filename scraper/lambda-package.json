@@ -1,0 +1,8 @@
+{
+  "name": "umd-bill-estimator-scraper-lambda",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "cheerio": "^1.2.0"
+  }
+}
