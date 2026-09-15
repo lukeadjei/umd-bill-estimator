@@ -54,7 +54,49 @@ Every reference table hangs off `academic_years` via foreign key. Deferred, not 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — client-safe
 - `SUPABASE_SERVICE_ROLE_KEY` — server-only, never exposed to the client
 - `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` — AI feature, server-only
-- AWS credentials — only needed for local scraper testing; the deployed Lambda uses its IAM role instead
+- `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_REGION` — only needed for local scraper testing; the deployed Lambda uses its IAM role instead
+- `AWS_PHOTOS_ACCESS_KEY_ID`/`AWS_PHOTOS_SECRET_ACCESS_KEY`/`AWS_PHOTOS_REGION`/`AWS_PHOTOS_BUCKET` — separate credential for the app's own read-only S3 access (housing photos). Deliberately distinct from the scraper's `AWS_*` vars above — different IAM user (`app-photo-reader`: `s3:ListBucket` + `s3:GetObject` only, no write), different purpose, never meant to collide.
+
+---
+
+## S3 bucket structure — housing photos
+
+Bucket: `umd-bill-estimator-photos` (region `us-east-2`), public-read on objects only (bucket policy grants anonymous `s3:GetObject`, nothing else — no public listing, no public write). Two IAM users touch this bucket, each scoped to exactly one job:
+- `s3-photo-uploader` — `s3:PutObject` + `s3:GetObject` only, used locally (`aws s3 cp`) to actually upload/replace photos. No delete permission on purpose (confirmed for real: an attempted `aws s3 rm` with this credential fails with AccessDenied, exactly as intended).
+- `app-photo-reader` — `s3:ListBucket` + `s3:GetObject` only, used server-side by the app itself to discover what's in each folder. No write/delete permission at all.
+
+S3 has no real folders — a "folder" is just everything sharing a key prefix, and the **filename after that prefix is always free-form (any name, any extension)** — only the prefix itself has to match exactly. Layout:
+
+```
+housing/room-types/<slug>/<any filename>
+housing/building-categories/<slug>/<any filename>
+```
+
+**Room type slugs** (8, matches every real `housing_rates.room_type` value):
+
+| DB value | Folder slug |
+|---|---|
+| Single | `single` |
+| Single With Bath | `single-with-bath` |
+| Double | `double` |
+| Double With Bath | `double-with-bath` |
+| Converted Single | `converted-single` |
+| Double Requires Bunked Beds | `double-requires-bunked-beds` |
+| Triple or Quad | `triple-or-quad` |
+| Triple or Quad With Bath | `triple-or-quad-with-bath` |
+
+**Building category slugs** (5 folders covering all 6 DB values — Traditional With/Without AC deliberately share one folder, no visual difference between them):
+
+| DB value | Folder slug |
+|---|---|
+| Traditional Without AC | `traditional` |
+| Traditional With AC | `traditional` |
+| New Traditional | `new-traditional` |
+| Semi-Suite | `semi-suite` |
+| Suite | `suite` |
+| Apartment | `apartment` |
+
+To add or replace a photo: `aws s3 cp your-photo.jpg s3://umd-bill-estimator-photos/housing/room-types/<slug>/your-photo.jpg` (or the `building-categories` path) using the `s3-photo-uploader` credential. No code changes needed either way — the app discovers whatever's actually in each folder at request time (cached ~24h, same as rate data).
 
 ---
 

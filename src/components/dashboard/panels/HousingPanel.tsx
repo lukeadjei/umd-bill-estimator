@@ -1,12 +1,36 @@
 "use client";
 
+import Image from "next/image";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { PanelTip } from "@/components/dashboard/PanelTip";
 import { SelectionDetail } from "@/components/dashboard/SelectionDetail";
 import { panelTextSizes } from "@/components/dashboard/typography";
 import { BUILDING_CATEGORY_DESCRIPTIONS, ROOM_TYPE_DESCRIPTIONS } from "@/lib/content/housingDescriptions";
+import { ImageLightbox } from "@/components/dashboard/panels/ImageLightbox";
 import type { HousingRateRow, LivingSituation } from "@/lib/calculator/types";
 import type { PanelProps } from "@/components/dashboard/selections";
+
+// A row of thumbnails plus an expand trigger -- today every folder has
+// exactly one placeholder, so the thumbnail row renders as one photo, but
+// the shape already supports a folder holding several, with zero changes
+// needed here once that many actually exist. The lightbox (full-screen,
+// prev/next arrows) is the same component regardless of count -- it just
+// hides its arrows/counter when there's only one photo to look at.
+function ImageGallery({ urls, alt }: { urls: string[]; alt: string }) {
+  if (urls.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2 overflow-x-auto">
+        {urls.map((url) => (
+          <div key={url} className="relative h-32 w-48 shrink-0 overflow-hidden rounded-xl ring-1 ring-foreground/10">
+            <Image src={url} alt={alt} fill sizes="192px" className="object-cover" />
+          </div>
+        ))}
+      </div>
+      <ImageLightbox urls={urls} alt={alt} />
+    </div>
+  );
+}
 
 // Falls back to when there's no prior on-campus choice yet (housing is null
 // while commuter is selected, or on first load). Must be a combination that
@@ -28,7 +52,7 @@ function buildingCategoriesForRoomType(housingRates: HousingRateRow[], roomType:
   );
 }
 
-export function HousingPanel({ selections, onChange, spacious, rates }: PanelProps) {
+export function HousingPanel({ selections, onChange, spacious, rates, housingImages }: PanelProps) {
   const { livingSituation, housing } = selections;
   const roomType = housing?.roomType ?? DEFAULT_HOUSING.roomType;
   const buildingCategory = housing?.buildingCategory ?? DEFAULT_HOUSING.buildingCategory;
@@ -99,6 +123,7 @@ export function HousingPanel({ selections, onChange, spacious, rates }: PanelPro
             {ROOM_TYPE_DESCRIPTIONS[roomType] && (
               <SelectionDetail spacious={spacious}>{ROOM_TYPE_DESCRIPTIONS[roomType]}</SelectionDetail>
             )}
+            <ImageGallery urls={housingImages.roomTypes[roomType] ?? []} alt={`${roomType} room`} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -116,6 +141,10 @@ export function HousingPanel({ selections, onChange, spacious, rates }: PanelPro
             {BUILDING_CATEGORY_DESCRIPTIONS[buildingCategory] && (
               <SelectionDetail spacious={spacious}>{BUILDING_CATEGORY_DESCRIPTIONS[buildingCategory]}</SelectionDetail>
             )}
+            <ImageGallery
+              urls={housingImages.buildingCategories[buildingCategory] ?? []}
+              alt={`${buildingCategory} building`}
+            />
           </div>
         </>
       )}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
+import { getHousingImages } from "@/lib/content/housingImages";
 import { getServerUser } from "@/lib/supabase/authServer";
 import { resolveScenarioForEditing } from "@/lib/supabase/scenarios";
 
@@ -44,7 +45,12 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ scenario?: string }>;
 }) {
-  const [rates, user, { scenario: scenarioId }] = await Promise.all([getRatesBundle(), getServerUser(), searchParams]);
+  const [rates, housingImages, user, { scenario: scenarioId }] = await Promise.all([
+    getRatesBundle(),
+    getHousingImages(),
+    getServerUser(),
+    searchParams,
+  ]);
 
   let initialSelections = null;
   let lockedScenarioMessage: string | null = null;
@@ -64,6 +70,7 @@ export default async function DashboardPage({
     <DashboardShell
       academicYearLabel={rates.academicYear.label}
       rates={rates}
+      housingImages={housingImages}
       isSignedIn={user !== null}
       userName={(user?.user_metadata?.full_name as string | undefined) ?? null}
       avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
