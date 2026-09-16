@@ -12,9 +12,12 @@
     "scrape": "tsx --env-file=.env.local scraper/index.ts",
     "promote": "tsx --env-file=.env.local scraper/promote.ts",
     "academic-year:create": "tsx --env-file=.env.local scraper/createAcademicYear.ts",
-    "academic-year:activate": "tsx --env-file=.env.local scraper/activateAcademicYear.ts"
+    "academic-year:activate": "tsx --env-file=.env.local scraper/activateAcademicYear.ts",
+    "build:lambda": "tsc -p tsconfig.lambda.json && node -e \"require('fs').copyFileSync('scraper/lambda-package.json','dist/lambda/package.json')\" && npm install --omit=dev --prefix dist/lambda"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/client-secrets-manager": "^3.1132.0",
     "@base-ui/react": "^1.7.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.112.4",
@@ -22,7 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.37.0",
-    "next": "16.3.2",
+    "next": "^16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "^3.6.0",
@@ -41,5 +44,8 @@
     "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

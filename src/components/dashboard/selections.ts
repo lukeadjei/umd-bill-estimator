@@ -1,4 +1,5 @@
 import type { RatesBundle, Selections } from "@/lib/calculator/types";
+import type { HousingImages } from "@/lib/content/housingImages";
 
 // The dashboard's single source of truth, lifted up into DashboardShell.
 // This is the REAL Selections type from the calc engine (src/lib/calculator/types.ts)
@@ -29,16 +30,19 @@ export const DEFAULT_SELECTIONS: DashboardSelections = {
   grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 
-// Every tab panel gets the same three props: the full selections object (a
+// Every tab panel gets the same props: the full selections object (a
 // panel only reads its own slice of it, but passing the whole thing keeps
 // this type -- and every panel's signature -- from having to change every
 // time a field is added), a patch-style updater, and the spacious flag for
-// font sizing when the chat panel is collapsed.
+// font sizing when the chat panel is collapsed. housingImages is only
+// actually used by HousingPanel today, same "pass the whole bundle" reasoning
+// as rates -- fetched once, server-side, in dashboard/page.tsx.
 export type PanelProps = {
   selections: DashboardSelections;
   onChange: (patch: Partial<DashboardSelections>) => void;
   spacious: boolean;
   rates: RatesBundle;
+  housingImages: HousingImages;
 };
 
 // sessionStorage (not localStorage) -- deliberately scoped to "until this

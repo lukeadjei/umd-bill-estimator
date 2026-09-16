@@ -54,7 +54,71 @@ Every reference table hangs off `academic_years` via foreign key. Deferred, not 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — client-safe
 - `SUPABASE_SERVICE_ROLE_KEY` — server-only, never exposed to the client
 - `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` — AI feature, server-only
-- AWS credentials — only needed for local scraper testing; the deployed Lambda uses its IAM role instead
+- `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_REGION` — only needed for local scraper testing; the deployed Lambda uses its IAM role instead
+- `AWS_PHOTOS_ACCESS_KEY_ID`/`AWS_PHOTOS_SECRET_ACCESS_KEY`/`AWS_PHOTOS_REGION`/`AWS_PHOTOS_BUCKET` — separate credential for the app's own read-only S3 access (housing photos). Deliberately distinct from the scraper's `AWS_*` vars above — different IAM user (`app-photo-reader`: `s3:ListBucket` + `s3:GetObject` only, no write), different purpose, never meant to collide.
+- `SUPABASE_SECRET_ARN`, `NEXT_PUBLIC_SUPABASE_URL` — set directly in the Lambda's own console configuration (Configuration → Environment variables), not `.env.local`. Neither is sensitive (an ARN is just an identifier; the Supabase URL is public-safe already), so both are plain Lambda env vars rather than Secrets Manager entries. `SUPABASE_SERVICE_ROLE_KEY` is deliberately **not** a Lambda env var at all — see the section below.
+
+---
+
+## S3 bucket structure — housing photos
+
+Bucket: `umd-bill-estimator-photos` (region `us-east-2`), public-read on objects only (bucket policy grants anonymous `s3:GetObject`, nothing else — no public listing, no public write). Two IAM users touch this bucket, each scoped to exactly one job:
+- `s3-photo-uploader` — `s3:PutObject` + `s3:GetObject` only, used locally (`aws s3 cp`) to actually upload/replace photos. No delete permission on purpose (confirmed for real: an attempted `aws s3 rm` with this credential fails with AccessDenied, exactly as intended).
+- `app-photo-reader` — `s3:ListBucket` + `s3:GetObject` only, used server-side by the app itself to discover what's in each folder. No write/delete permission at all.
+
+S3 has no real folders — a "folder" is just everything sharing a key prefix, and the **filename after that prefix is always free-form (any name, any extension)** — only the prefix itself has to match exactly. Layout:
+
+```
+housing/room-types/<slug>/<any filename>
+housing/building-categories/<slug>/<any filename>
+```
+
+**Room type slugs** (8, matches every real `housing_rates.room_type` value):
+
+| DB value | Folder slug |
+|---|---|
+| Single | `single` |
+| Single With Bath | `single-with-bath` |
+| Double | `double` |
+| Double With Bath | `double-with-bath` |
+| Converted Single | `converted-single` |
+| Double Requires Bunked Beds | `double-requires-bunked-beds` |
+| Triple or Quad | `triple-or-quad` |
+| Triple or Quad With Bath | `triple-or-quad-with-bath` |
+
+**Building category slugs** (5 folders covering all 6 DB values — Traditional With/Without AC deliberately share one folder, no visual difference between them):
+
+| DB value | Folder slug |
+|---|---|
+| Traditional Without AC | `traditional` |
+| Traditional With AC | `traditional` |
+| New Traditional | `new-traditional` |
+| Semi-Suite | `semi-suite` |
+| Suite | `suite` |
+| Apartment | `apartment` |
+
+To add or replace a photo: `aws s3 cp your-photo.jpg s3://umd-bill-estimator-photos/housing/room-types/<slug>/your-photo.jpg` (or the `building-categories` path) using the `s3-photo-uploader` credential. No code changes needed either way — the app discovers whatever's actually in each folder at request time (cached ~24h, same as rate data).
+
+---
+
+## AWS Lambda scraper automation
+
+Automates the scrape-into-staging half of the pipeline below on a monthly schedule. Promotion stays a deliberate manual step (`npm run promote`), by design — never automated.
+
+**Secrets Manager**: one secret, `umd-bill-estimator/supabase-service-role-key` (ARN: `arn:aws:secretsmanager:us-east-2:391894612707:secret:umd-bill-estimator/supabase-service-role-key-ZL62sv`), holding `{ SUPABASE_SERVICE_ROLE_KEY: "<value>" }` as its key/value JSON. No rotation configured (not applicable — this isn't a key AWS can regenerate on its own). Chosen over a plain Lambda environment variable specifically because Secrets Manager access requires its own independently-grantable IAM permission (`secretsmanager:GetSecretValue`), whereas a Lambda's plain env vars are visible in plaintext to anyone who can view that function's configuration.
+
+**Three separate IAM roles/permissions, least-privilege, each scoped to exactly one job** — the same discipline as the S3 IAM users above, applied across three different *kinds* of AWS-run identity:
+- `umd-bill-estimator-scraper-lambda-role` — the Lambda's own execution role. Trust policy: only the Lambda service can assume it. Permissions: `AWSLambdaBasicExecutionRole` (AWS-managed, CloudWatch logging baseline) + one inline policy (`read-supabase-secret`) granting `secretsmanager:GetSecretValue` scoped to the one secret ARN above, nothing broader.
+- The EventBridge Scheduler's own auto-generated role (created via the scheduler's "Create new role for this schedule" option) — trust policy: only the Scheduler service can assume it. Permission: `lambda:InvokeFunction` scoped to this one function's ARN, nothing else.
+- No VPC — Lambda's default networking already reaches the public internet (UMD's pages), and a VPC here would only mean paying for a NAT gateway for no benefit.
+
+**Lambda function**: `umd-bill-estimator-scraper`, Node.js 20.x, handler `scraper/lambdaHandler.handler`, timeout bumped to 2 min (default 3 sec is nowhere near enough for six sequential page scrapes — real runs finish in ~9.5s, so there's plenty of headroom), memory 256 MB. Deployed by zipping `dist/lambda` (`npm run build:lambda`, then `Compress-Archive -Path dist\lambda\* -DestinationPath dist\lambda.zip` on Windows) and uploading via the console's "Upload from → .zip file."
+
+**`scraper/lambdaHandler.ts`'s secret-fetch mechanism** — the one piece of code specific to running in Lambda, not shared with the CLI scripts: `handler()` calls Secrets Manager (`GetSecretValueCommand`, authenticated implicitly via the execution role, no credentials in code) and sets `process.env.SUPABASE_SERVICE_ROLE_KEY` from the result, then `await import()`s `supabaseClient.ts`/`runScrape.ts` — a **dynamic** import specifically so that module evaluation (and `supabaseClient.ts`'s existing top-of-file `process.env` read, left completely unchanged) happens *after* the secret lands in the environment, not before. `supabaseClient.ts` itself and all four CLI scripts (`scrape`/`promote`/`academic-year:create`/`academic-year:activate`) needed zero changes — `lambdaHandler.ts` is the only thing `tsconfig.lambda.json` ever bundles, so it's the only code that ever runs inside Lambda at all.
+
+**EventBridge Scheduler**: `umd-bill-estimator-monthly-scrape`, cron `cron(0 6 1 * ? *)` (06:00 UTC on the 1st of every month), targeting the Lambda directly, flexible time window off (irrelevant with a single target).
+
+**Verified for real, 2026-09-15**: manual console "Test" invoke succeeded end to end — all six scrape groups staged with no errors, `Billed Duration: 9445 ms`, `Max Memory Used: 149 MB` (comfortable under the 2 min / 256 MB budgets). Confirms the full chain: the execution role's implicit auth to Secrets Manager, the fetched key's validity against the real staging tables, and the dynamic-import ordering trick all worked correctly on a real run, not just in theory.
 
 ---
 
@@ -99,6 +163,6 @@ npm run promote -- <academic_year_id>
 | 9b | Settings page + account management (protected route, dashboard nav entry point, saved scenarios list, sign out, delete account) | **Done** | `/settings` is genuinely protected at two independent layers: `src/proxy.ts` (Next.js 16 renamed the `middleware.ts` file convention to `proxy.ts` — same mechanism, confirmed by reading Next's own build source rather than guessing; also refreshes the Supabase session cookie on every request, since Server Components can't write cookies themselves) redirects unauthenticated visits before any page code runs, and `settings/page.tsx` independently redirects too via `getServerUser()` — neither depends on the other. Dashboard nav gained a dropdown menu (Settings / Saved Scenarios / Sign out) off the user's Google avatar, replacing an earlier bare-link version that wasn't discoverable enough — new `dropdown-menu.tsx` component. Avatar images were briefly broken in local dev: root-caused (not guessed) to Google's profile-photo CDN rate-limiting requests carrying a `localhost` referrer — confirmed via direct `curl` tests with/without a `Referer` header — fixed with `referrerPolicy="no-referrer"` on the `<img>`. Saved Scenarios panel shows a real list (name, optional note, total, date), each entry a real link that loads that scenario back into the dashboard (`?scenario=<id>`, see step 9's entry for the security details). Delete account: new `AlertDialog` component, confirmed destructively, then one call to `supabase.auth.admin.deleteUser()` — deliberately does NOT attempt to revoke the Google OAuth grant (the user's own data, already under their control, never ours to manage) and needs no separate scenarios-delete step (`on delete cascade`, enforced by Postgres). Four presentational/UI pieces built by parallel sub-agents across two rounds against fixed contracts; all auth/security/Server Action/proxy code built directly. `tsc`/lint/60 tests/production build all clean. **2026-09-09: the real signed-in settings experience confirmed working** (avatar, welcome text, real account/scenario data, sign out, delete account, scenario notes/loading) by the user on a different machine — see PROGRESS-LOG. |
 | 10 | Build the results/print page | **Built and verified, 2026-09-08** | `/dashboard/results` — a Server Component fetches cached rates, a Client Component (`ResultsShell`) reads `selections` back out of `sessionStorage` (never in the `useState` initializer directly — that would create a server/client hydration mismatch, since `sessionStorage` doesn't exist during SSR) and recomputes the breakdown live via the same `calculateTotal`/category functions the dashboard uses — never a stored/stale number, single source of truth preserved. Print/PDF handled with plain CSS, not a separate code path: `@page { size: letter; margin: 0.75in }` in `globals.css` (confirmed present via a real DOM query, not just visual inspection) plus Tailwind's `print:hidden`/`print:p-0`/`print:ring-0` on the on-screen-only chrome and the content card (also confirmed via a real DOM query of applied classes) — a browser's "Save as PDF" is a print destination, not a different renderer, so this one set of rules covers both. **"Generate" restored as its own button in `SummaryBar`** (separate from the since-relabeled "Save"), available to guests too since it never touches the database, gated on `validation.valid`. **A real bug found and fixed during testing, not assumed away:** the sessionStorage persistence layer (`DashboardShell`) had a genuine race condition — the write-effect could fire on the very first render, before rehydration completed, clobbering real stored data with the fresh-mount default. Found via direct `sessionStorage` inspection after a refresh (not just visual symptoms), fixed with a `hydrated` state gate so the write-effect can't fire until rehydration has actually landed in that same render (React 18 batches the two `setState` calls together). Confirmed the fix with a deterministic test (seeded `sessionStorage` directly, watched the actual effect log sequence) plus a full real click-through round trip: fill form → refresh → same numbers persist; Generate → results page → Back to dashboard → same numbers persist throughout. `tsc`/lint/60 tests/production build all clean. |
 | 11 | Build the AI natural-language input feature (Route Handler) | Not started — genuinely unblocked | Only needs the live UI/calc pipeline to parse into, which doesn't require auth — this one's sequencing call still holds |
-| 12 | Set up the AWS scraper pipeline (S3, Lambda, EventBridge, IAM) | Partial | Manual `npm run scrape` / `npm run promote` pipeline built and run for real against 2026-2027 data (2026-08-30). Lambda/EventBridge automation of the trigger still deferred — not blocking anything, promotion is meant to stay a manual human decision anyway. |
+| 12 | Set up the AWS scraper pipeline (S3, Lambda, EventBridge, IAM) | **Done** | Manual `npm run scrape` / `npm run promote` pipeline built and run for real against 2026-2027 data (2026-08-30). S3 housing photos built 2026-09-15. **2026-09-15/16: Lambda automation of the scrape-into-staging trigger built and verified end to end** — Secrets Manager secret, 3 least-privilege IAM roles, the Lambda function itself, and a monthly EventBridge Scheduler cron. Real manual "Test" invoke in the console succeeded with zero errors across all six scrape groups. Promotion deliberately stays manual (`npm run promote`), by design — never automated. See `## AWS Lambda scraper automation` above for the full setup. |
 | 13 | Set up CI/CD (GitHub Actions lint/build, Vercel auto-deploy) | Partial | GitHub Actions lint/build done 2026-08-23. Vercel auto-deploy not connected. |
 | 14 | Polish, accessibility pass, deploy | Not started | |

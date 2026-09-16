@@ -1,0 +1,9 @@
+{
+  "name": "umd-bill-estimator-scraper-lambda",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1132.0",
+    "@supabase/supabase-js": "^2.112.4",
+    "cheerio": "^1.2.0"
+  }
+}

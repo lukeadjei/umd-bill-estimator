@@ -28,6 +28,7 @@ import { ParkingPanel } from "@/components/dashboard/panels/ParkingPanel";
 import { MealsPanel } from "@/components/dashboard/panels/MealsPanel";
 import { AidPanel } from "@/components/dashboard/panels/AidPanel";
 import type { RatesBundle } from "@/lib/calculator/types";
+import type { HousingImages } from "@/lib/content/housingImages";
 import {
   calculateTuition,
   calculateDifferentialTuition,
@@ -107,6 +108,7 @@ const SCATTER_LAYOUT: ScatterItem[] = [
 export function DashboardShell({
   academicYearLabel,
   rates,
+  housingImages,
   isSignedIn,
   userName,
   avatarUrl,
@@ -115,6 +117,7 @@ export function DashboardShell({
 }: {
   academicYearLabel: string;
   rates: RatesBundle;
+  housingImages: HousingImages;
   isSignedIn: boolean;
   userName: string | null;
   avatarUrl: string | null;
@@ -274,7 +277,13 @@ export function DashboardShell({
 
           <div className="animate-fade-in-up relative flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
             <PanelNavArrows activeTab={activeTab} onTabChange={handleTabChange} />
-            <ActivePanel selections={selections} onChange={updateSelections} spacious={chatCollapsed} rates={rates} />
+            <ActivePanel
+              selections={selections}
+              onChange={updateSelections}
+              spacious={chatCollapsed}
+              rates={rates}
+              housingImages={housingImages}
+            />
           </div>
 
           <CostBreakdown
