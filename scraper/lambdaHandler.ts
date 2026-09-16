@@ -1,5 +1,25 @@
-import { supabase } from "./supabaseClient";
-import { runScrape } from "./runScrape";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+
+// Populates process.env.SUPABASE_SERVICE_ROLE_KEY from Secrets Manager --
+// must run and complete BEFORE supabaseClient.ts is imported anywhere in the
+// call graph below, since that module reads the env var at import time, not
+// per-call. Auth to Secrets Manager itself is implicit: no credentials here,
+// just the IAM role attached to this Lambda.
+async function loadServiceRoleKeyIntoEnv(): Promise<void> {
+  const secretArn = process.env.SUPABASE_SECRET_ARN;
+  if (!secretArn) {
+    throw new Error("Missing SUPABASE_SECRET_ARN environment variable (set on the Lambda's configuration)");
+  }
+
+  const client = new SecretsManagerClient({});
+  const response = await client.send(new GetSecretValueCommand({ SecretId: secretArn }));
+  if (!response.SecretString) {
+    throw new Error(`Secrets Manager returned no SecretString for ${secretArn}`);
+  }
+
+  const parsed = JSON.parse(response.SecretString) as { SUPABASE_SERVICE_ROLE_KEY: string };
+  process.env.SUPABASE_SERVICE_ROLE_KEY = parsed.SUPABASE_SERVICE_ROLE_KEY;
+}
 
 // The Lambda entry point -- triggered on a schedule by EventBridge
 // Scheduler, not by a human typing a command. Unlike the CLI (which takes an
@@ -19,6 +39,10 @@ import { runScrape } from "./runScrape";
 // behavior on a failed invocation is the right response, not something this
 // handler should try to paper over.
 export async function handler(): Promise<{ statusCode: number; body: string }> {
+  await loadServiceRoleKeyIntoEnv();
+  const { supabase } = await import("./supabaseClient");
+  const { runScrape } = await import("./runScrape");
+
   const { data: currentYear, error } = await supabase
     .from("academic_years")
     .select("id, label")
