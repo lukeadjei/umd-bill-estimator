@@ -302,11 +302,18 @@ export function DashboardShell({
           />
         </div>
 
-        {!chatCollapsed && <ChatPanel onCollapse={() => setChatCollapsed(true)} />}
+        {!chatCollapsed && (
+          <ChatPanel selections={selections} onSelectionsChange={updateSelections} onCollapse={() => setChatCollapsed(true)} />
+        )}
       </div>
 
       <ChatFab onClick={() => setChatOpen(true)} />
-      <ChatOverlay open={chatOpen} onOpenChange={setChatOpen} />
+      <ChatOverlay
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        selections={selections}
+        onSelectionsChange={updateSelections}
+      />
     </div>
   );
 }

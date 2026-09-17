@@ -2,6 +2,7 @@
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ChatPanelContent } from "@/components/dashboard/ChatPanelContent";
+import type { DashboardSelections } from "@/components/dashboard/selections";
 
 // Mobile-only bottom sheet, opened by ChatFab. Reuses the same
 // ChatPanelContent as the desktop ChatPanel so the two surfaces can't drift
@@ -9,15 +10,19 @@ import { ChatPanelContent } from "@/components/dashboard/ChatPanelContent";
 export function ChatOverlay({
   open,
   onOpenChange,
+  selections,
+  onSelectionsChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  selections: DashboardSelections;
+  onSelectionsChange: (patch: Partial<DashboardSelections>) => void;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-none p-0 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] data-[side=bottom]:h-[85vh] md:hidden">
         <SheetTitle className="sr-only">Assistant chat</SheetTitle>
-        <ChatPanelContent />
+        <ChatPanelContent selections={selections} onSelectionsChange={onSelectionsChange} />
       </SheetContent>
     </Sheet>
   );

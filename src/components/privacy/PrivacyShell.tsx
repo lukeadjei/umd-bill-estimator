@@ -51,7 +51,7 @@ export function PrivacyShell() {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="font-spicy-rice text-3xl tracking-wider text-foreground md:text-4xl">Privacy &amp; Data</h1>
-          <p className="text-sm text-muted-foreground">Last updated September 2, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated September 15, 2026</p>
         </div>
 
         <div className="flex flex-col gap-8 rounded-none bg-card/90 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.3)] md:p-10">
@@ -72,6 +72,12 @@ export function PrivacyShell() {
               scenario, we store the selections that make it up (which tuition rate, housing type, dining plan, and
               parking permit you picked) and the resulting computed total, tied to your account.
             </p>
+            <p>
+              If you use the chat assistant, whatever you type is sent to a third-party AI provider to be parsed
+              (see &quot;Third parties&quot; below) and is briefly logged on our end for debugging — typically kept a
+              few weeks, then automatically deleted. This happens the same way whether or not you&apos;re signed in;
+              for a guest, that log entry isn&apos;t linked to any account or identity.
+            </p>
           </Section>
 
           <Section title="How it's used">
@@ -85,6 +91,12 @@ export function PrivacyShell() {
               structured selections only (which options you meant) — the AI never computes or has any part in
               producing a dollar amount. Every price shown always comes from this app&apos;s own calculation logic,
               run locally against the same public rate data described below.
+            </p>
+            <p>
+              The brief debugging log mentioned above (your message, what the AI extracted from it, and whether that
+              passed our own validation) is only ever used to fix bugs in how the assistant parses input. It&apos;s
+              never used for advertising, profiling, or any purpose beyond that, and it&apos;s not accessible through
+              any part of the app itself — only reachable directly against the database by the developer.
             </p>
           </Section>
 
@@ -118,8 +130,13 @@ export function PrivacyShell() {
           <Section title="Third parties">
             <p>
               We don&apos;t sell or share your saved selections or account information with any third party. Google
-              is used only as the sign-in provider (via Supabase Auth) — no separate advertising or tracking
-              integrations are wired into this app.
+              is used as the sign-in provider (via Supabase Auth) — no separate advertising or tracking integrations
+              are wired into this app.
+            </p>
+            <p>
+              If you use the chat assistant, whatever you type is sent to Google&apos;s Gemini API to be parsed into
+              structured selections — that&apos;s the one case where your input leaves this app to a third-party AI
+              provider. It&apos;s sent only to parse your message, never for advertising or any other purpose.
             </p>
           </Section>
 
