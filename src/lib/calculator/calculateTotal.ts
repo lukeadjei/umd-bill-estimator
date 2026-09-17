@@ -41,9 +41,8 @@ export function calculateTuition(selections: Selections, rates: RatesBundle): nu
 
 // Same flat-vs-per-credit split as calculateTuition, added as a separate line item.
 export function calculateDifferentialTuition(selections: Selections, rates: RatesBundle): number {
-  // Assumption, not yet confirmed: graduate students never get charged
-  // differential tuition (it was researched under undergrad junior/senior
-  // classification). Revisit if that turns out to be wrong.
+  // Graduate students never get charged differential tuition -- confirmed
+  // (it's an undergrad junior/senior classification only).
   if (selections.educationLevel === "graduate") return 0;
   if (!selections.appliesDifferentialTuition) return 0;
 

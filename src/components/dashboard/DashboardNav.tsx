@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SemesterToggle } from "@/components/dashboard/SemesterToggle";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,24 @@ export function DashboardNav({
               <DropdownMenuItem onClick={() => signOutAction()}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+
+        {/* Standing sign-in entry point for guests -- previously the only
+            sign-in prompt anywhere on the dashboard was SummaryBar's "Sign in
+            to save your plan" button, which only appears once a guest is
+            already trying to save. This gives guests a permanent, low-key way
+            in from the persistent top nav instead. */}
+        {!isSignedIn && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            nativeButton={false}
+            render={<Link href="/sign-in" />}
+          >
+            Sign in
+          </Button>
         )}
       </div>
     </div>

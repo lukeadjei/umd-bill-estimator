@@ -46,7 +46,7 @@ Every table below has an `academic_year_id` foreign key to `academic_years`, whi
 
 ## Working style with the developer
 
-This project is being built for internship prep — the goal is code the developer can defend in an interview, not just code that works. Calibrate what to build autonomously vs. what to work through together:
+This project is meant to reflect genuine engineering care — the goal is code the developer deeply understands and can explain, not just code that works. Calibrate what to build autonomously vs. what to work through together:
 
 **Fine to build directly:**
 - Scaffolding, boilerplate, config files (Next.js setup, ESLint/Prettier, Tailwind config, CI/CD)
@@ -64,13 +64,14 @@ This project is being built for internship prep — the goal is code the develop
 
 **Never do on his behalf:** git commands (add/commit/branch/merge) — he should type these himself, even if you suggest what to run.
 
-Rule of thumb: if it's something an interviewer could plausibly ask him to explain, make sure he understands it deeply, even if you write the first draft. If it's plumbing that just needs to exist and work, build it.
+Rule of thumb: if it's real engineering reasoning behind a decision (not just boilerplate), make sure he understands it deeply, even if you write the first draft. If it's plumbing that just needs to exist and work, build it.
 
 ## Where to find more context
 
-**Check these two first, every session — they're the live cross-machine status:**
+**Check these first, every session — they're the live cross-machine status:**
 - `docs/BUILD-REFERENCE.md` — the "Build order" table at the bottom is the canonical "where am I" status (Done/Partial/Not started per step), kept current whenever a work-order decision is made or a step's status changes.
 - `docs/PROGRESS-LOG.md` — dated, append-only session-by-session detail behind that table (the *why* and *how*, not just the *what*).
+- `docs/POLISH-CHECKLIST.md` — once in the polish phase (step 14): a running, editable-in-place checklist of small pre-launch items — distinct from the two files above, which are historical/status records, not a working list.
 
 **Reference only as needed:**
 - `docs/umd-bill-estimator-housing-dining-rules.md` — housing/dining eligibility rules in detail

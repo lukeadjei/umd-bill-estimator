@@ -131,8 +131,7 @@ export const MAJORS: string[] = [
 //   - Engineering (A. James Clark School of Engineering)
 //   - Computer Science (the CS department specifically, not all of CMNS --
 //     e.g. Astronomy/Physics/Mathematics are CMNS but not flagged here)
-// Worth double-checking against UMD's actual differential-tuition policy --
-// this codebase never had this encoded as data before, only as a sentence.
+// Confirmed against UMD's actual differential-tuition policy.
 export const DIFFERENTIAL_TUITION_MAJORS: ReadonlySet<string> = new Set([
   // Business
   "Accounting",

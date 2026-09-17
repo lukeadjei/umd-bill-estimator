@@ -51,46 +51,58 @@ export function PrivacyShell() {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="font-spicy-rice text-3xl tracking-wider text-foreground md:text-4xl">Privacy &amp; Data</h1>
-          <p className="text-sm text-muted-foreground">Last updated September 15, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated September 17, 2026</p>
         </div>
 
         <div className="flex flex-col gap-8 rounded-none bg-card/90 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.3)] md:p-10">
           <p className="text-base text-muted-foreground">
-            UMD Bill Estimator is an unofficial, student-built portfolio project. It is not affiliated with,
+            UMD Bill Estimator is an unofficial, student-built solo project. It is not affiliated with,
             endorsed by, or sponsored by the University of Maryland. This page explains, in plain terms, what data
             this app touches and what it does with it.
           </p>
 
           <Section title="What we collect">
             <p>
-              Using the estimator itself doesn&apos;t require an account and doesn&apos;t send us anything — you can
-              build out a full tuition, housing, dining, and parking estimate anonymously, and nothing about that
-              session is stored.
+              Using the estimator itself doesn&apos;t require an account — you can build out a full tuition,
+              housing, dining, and parking estimate anonymously, and nothing about that session is stored.
             </p>
             <p>
-              An account is only created if you choose to sign in with Google. If you then choose to save a
-              scenario, we store the selections that make it up (which tuition rate, housing type, dining plan, and
-              parking permit you picked) and the resulting computed total, tied to your account.
+              An account is only created if you choose to sign in with Google. Signing in stores your name and
+              profile picture (from Google, via Supabase Auth) so the dashboard can show who&apos;s signed in. If
+              you then choose to save a scenario, we store the selections that make it up (tuition rate, housing
+              type, dining plan, parking permit, credit hours, and major), any grant or financial aid amounts and
+              the optional note you add to it, and the resulting computed total — all tied to your account.
             </p>
             <p>
-              If you use the chat assistant, whatever you type is sent to a third-party AI provider to be parsed
-              (see &quot;Third parties&quot; below) and is briefly logged on our end for debugging — typically kept a
-              few weeks, then automatically deleted. This happens the same way whether or not you&apos;re signed in;
-              for a guest, that log entry isn&apos;t linked to any account or identity.
+              If you use the chat assistant, a small anonymous cookie (<code className="rounded bg-muted px-1 py-0.5 text-sm">ai_guest_id</code>) is
+              set the first time you send a message, even if you&apos;re not signed in — it&apos;s just a random
+              identifier, not tied to any account or personal information, and it exists so the assistant can be
+              rate-limited fairly per user instead of everyone sharing one pool. Whatever you type is also sent to
+              a third-party AI provider to be parsed (see &quot;Third parties&quot; below) and is briefly logged on
+              our end for debugging — typically kept a few weeks, then automatically deleted. This happens the same
+              way whether or not you&apos;re signed in; for a guest, that log entry is linked only to the anonymous
+              cookie above, never to any account or identity.
             </p>
           </Section>
 
           <Section title="How it's used">
             <p>
-              Saved selections and totals exist for one purpose: so you can come back later and see the estimates
-              you built, instead of re-entering everything from scratch. They aren&apos;t used for anything beyond
-              that — no analytics profiling, no advertising, no resale.
+              Saved selections, grant amounts, notes, and totals exist for one purpose: so you can come back later
+              and see the estimates you built, instead of re-entering everything from scratch. Your name and
+              profile picture are used only to show you&apos;re signed in. None of this is used for anything
+              beyond that — no analytics profiling, no advertising, no resale.
             </p>
             <p>
               If natural-language input is used to fill out a scenario, that text is parsed by an AI model into
               structured selections only (which options you meant) — the AI never computes or has any part in
               producing a dollar amount. Every price shown always comes from this app&apos;s own calculation logic,
               run locally against the same public rate data described below.
+            </p>
+            <p>
+              The anonymous chat cookie mentioned above is used only to count how many requests are coming from the
+              same browser, so the assistant can enforce a per-minute and per-day limit and stay protected from
+              abuse — it isn&apos;t used for tracking, profiling, or anything else, and the request counts
+              themselves aren&apos;t linked to any account.
             </p>
             <p>
               The brief debugging log mentioned above (your message, what the AI extracted from it, and whether that
@@ -102,11 +114,17 @@ export function PrivacyShell() {
 
           <Section title="How it's protected">
             <p>
-              Saved scenarios live in a Postgres database with row-level security enforced by the database itself,
-              not just application code: the policy on the <code className="rounded bg-muted px-1 py-0.5 text-sm">scenarios</code> table
-              restricts every read to rows where <code className="rounded bg-muted px-1 py-0.5 text-sm">auth.uid() = user_id</code> — meaning
-              Postgres itself refuses to return anyone else&apos;s saved scenarios to you, and refuses to return yours
-              to anyone else.
+              Each saved scenario is tagged with your own account&apos;s unique ID, and the database itself checks
+              that ID matches before it will return any row — so no one, including the app&apos;s own code if it had
+              a bug, can pull up another student&apos;s saved scenarios, and you can&apos;t accidentally see anyone
+              else&apos;s either. This is enforced by the database, not just app code, so it can&apos;t be bypassed
+              by the application making a mistake.{" "}
+              <span className="text-sm">
+                (Technically: it&apos;s a Postgres row-level security policy on the{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-sm">scenarios</code> table that restricts every
+                read to rows where{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-sm">auth.uid() = user_id</code>.)
+              </span>
             </p>
             <p>
               Writes work the same way from the other direction: saving or updating a scenario goes through a
@@ -151,12 +169,15 @@ export function PrivacyShell() {
 
           <Section title="Questions">
             <p>
-              This is a solo portfolio project. If you have a question about how it handles data, reach out at{" "}
+              This is a solo project. If you spot a bug, have feedback, or have a question about how it handles
+              data,{" "}
               <a
-                href="mailto:boomcloud3000@gmail.com"
+                href="https://docs.google.com/forms/d/e/1FAIpQLSccCK7NUbu5fulr_QkXMjUpEQ80U940x-m87SDH990qu8zF9A/viewform?usp=dialog"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-primary underline-offset-4 hover:underline"
               >
-                boomcloud3000@gmail.com
+                report a bug or leave feedback here
               </a>
               .
             </p>

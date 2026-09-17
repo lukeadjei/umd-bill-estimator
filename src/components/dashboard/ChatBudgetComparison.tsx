@@ -193,7 +193,15 @@ export function ChatBudgetComparison({
       )}
 
       <div className="@container w-full">
-        <div className="grid grid-cols-1 gap-2 @sm:grid-cols-2">
+        {/* @xl (not @sm) on purpose -- these cards carry a long label, a
+            budget badge, a price, and change chips, so anything narrower
+            than ~36rem per pair squeezes two columns down to the point
+            where labels like "Traditional Without AC (Double Bunked)" wrap
+            across four or five lines. @sm (24rem) used to fire inside both
+            the ~26rem desktop side panel and the mobile bottom sheet, which
+            are exactly the two containers this component ever renders in --
+            so two columns effectively never had enough room to look right. */}
+        <div className="grid grid-cols-1 gap-2 @xl:grid-cols-2">
           {result.scenarios.map((scenario, index) => (
             <ScenarioCard
               key={scenario.label}
