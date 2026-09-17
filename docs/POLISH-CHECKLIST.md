@@ -26,10 +26,12 @@ Running list for the polish/pre-launch phase — check items off as they land. U
 
 ## Style & animation
 
-- [ ] Chat message bubbles have no entrance animation right now (`ChatPanelContent.tsx`) — everything else new in the chat (confirmation chips' parent, the budget cards) uses `animate-fade-in-up`; the bubbles themselves just appear. Small, cheap, consistency fix.
-- [ ] "Assistant is typing…" is plain italic text — a proper three-dot bounce (CSS-only, no new dependency) would fit the app's existing playful tone better.
-- [ ] A real dark-mode click-through of the whole app — `dark:` variants are used extensively throughout, but there's never been a dedicated "toggle dark mode, walk every page" pass logged; worth confirming nothing looks off (especially the newer AI chat components).
-- [ ] Optional/delight: a small celebratory micro-animation the first time a guest reaches a valid, complete plan and hits "Generate" — fits the warm/approachable tone the fonts were chosen for (see `layout.tsx`'s Nunito comment), not required.
+- [x] Dark mode: manual toggle + OS-preference default. Done 2026-09-17 (delegated) — `ThemeToggle.tsx` (site-wide, `localStorage`-persisted, `useSyncExternalStore`-based, no flash) plus a real click-through of every page (dashboard tabs, chat panel, results/print, settings, privacy, about, 404) confirmed nothing looked off; illustration SVGs fixed with `dark:invert`.
+- [x] Chat message bubbles have no entrance animation right now (`ChatPanelContent.tsx`). Done 2026-09-17 (delegated) — `animate-fade-in-up` added, confirmed live that only newly-arrived messages animate, not the whole thread re-animating on each render.
+- [x] Dashboard panel switching had no transition. Done 2026-09-17 (delegated, not originally listed here but found during the animation brainstorm) — `key={activeTab}` on the panel wrapper replays the existing fade-in on every tab change.
+- [x] Live total in `SummaryBar` didn't acknowledge when it changed. Done 2026-09-17 (delegated) — brief scale-pulse on any total change (selection edits, before/after-aid toggle), skipped on initial mount.
+- [ ] "Assistant is typing…" is plain italic text — a proper three-dot bounce (CSS-only, no new dependency) would fit the app's existing playful tone better. Still open — not one of the 3 animation items picked from the brainstorm list.
+- [ ] Optional/delight: a small celebratory micro-animation the first time a guest reaches a valid, complete plan and hits "Generate" — fits the warm/approachable tone the fonts were chosen for (see `layout.tsx`'s Nunito comment), not required. Still open.
 
 ## Technical / meta cleanup
 

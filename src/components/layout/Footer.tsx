@@ -18,6 +18,21 @@ export function Footer() {
         </Link>{" "}
         for details.
       </p>
+      {/* Same Google Form as /privacy's Questions section -- this is just a
+          second, more visible entry point to it (site-wide instead of buried
+          on the privacy page), not a separate form. */}
+      <p className="mt-2">
+        Found a bug, or have feedback?{" "}
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSccCK7NUbu5fulr_QkXMjUpEQ80U940x-m87SDH990qu8zF9A/viewform?usp=dialog"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          Let us know
+        </a>
+        .
+      </p>
     </footer>
   );
 }

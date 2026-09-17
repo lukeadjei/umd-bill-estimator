@@ -21,7 +21,7 @@ This app puts it all in one place: pick your real situation and get a live, item
 
 ## Live demo
 
-Not deployed yet — GitHub Actions lint/build CI is wired up, but the Vercel connection is still pending. Coming soon.
+**[umd-bill-estimator.vercel.app](https://umd-bill-estimator.vercel.app/)**
 
 ## Features
 

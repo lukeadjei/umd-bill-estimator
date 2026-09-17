@@ -34,9 +34,36 @@ const spicyRice = Spicy_Rice({
   weight: "400",
 });
 
+// metadataBase makes the openGraph image URL below resolve to an absolute
+// https://umd-bill-estimator.vercel.app/... URL instead of a relative one --
+// required for social platforms (which fetch this page from their own
+// servers, with no concept of "relative to this site") to actually load it.
+const SITE_URL = "https://umd-bill-estimator.vercel.app";
+
 export const metadata: Metadata = {
   title: "UMD Bill Estimator",
   description: "Unofficial cost estimator for the University of Maryland -- tuition, housing, dining, and parking.",
+  metadataBase: new URL(SITE_URL),
+  // Without this, a link to this site pasted into iMessage/Slack/Discord/
+  // LinkedIn shows as bare text with no preview card -- these two blocks are
+  // what those platforms actually read to build one. Reusing the Dashboard
+  // preview card's own screenshot (the same image used on the homepage)
+  // rather than commissioning a separate designed asset -- real dimensions
+  // (1768x1360) declared explicitly so platforms don't have to guess/crop
+  // blind.
+  openGraph: {
+    title: "UMD Bill Estimator",
+    description: "Unofficial cost estimator for the University of Maryland -- tuition, housing, dining, and parking.",
+    url: SITE_URL,
+    siteName: "UMD Bill Estimator",
+    images: [{ url: "/illustrations/dashboardPic.png", width: 1768, height: 1360 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "UMD Bill Estimator",
+    description: "Unofficial cost estimator for the University of Maryland -- tuition, housing, dining, and parking.",
+    images: ["/illustrations/dashboardPic.png"],
+  },
 };
 
 // Dark mode activation.

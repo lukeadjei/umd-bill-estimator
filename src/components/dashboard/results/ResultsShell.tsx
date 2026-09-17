@@ -79,6 +79,22 @@ export function ResultsShell({ rates }: { rates: RatesBundle }) {
       </div>
 
       <BillDocument selections={selections} rates={rates} />
+
+      {/* Same feedback form as the footer/privacy page -- placed here too
+          since this is the app's actual payoff moment (a real generated
+          estimate), the best time to ask. print:hidden, on-screen only. */}
+      <p className="mt-6 text-center text-sm text-muted-foreground print:hidden">
+        Was this helpful?{" "}
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSccCK7NUbu5fulr_QkXMjUpEQ80U940x-m87SDH990qu8zF9A/viewform?usp=dialog"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          Tell us what you think
+        </a>
+        .
+      </p>
     </div>
   );
 }
