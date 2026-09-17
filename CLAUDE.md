@@ -73,9 +73,9 @@ Rule of thumb: if it's something an interviewer could plausibly ask him to expla
 - `docs/PROGRESS-LOG.md` — dated, append-only session-by-session detail behind that table (the *why* and *how*, not just the *what*).
 
 **Reference only as needed:**
-- `docs/HOUSING-DINING-RULES.md` — housing/dining eligibility rules in detail
-- `docs/PARKING-RULES.md` — parking permit types and rules in detail
-- `docs/DATA-SOURCES.md` — every scrape source URL, organized by category
+- `docs/umd-bill-estimator-housing-dining-rules.md` — housing/dining eligibility rules in detail
+- `docs/umd-bill-estimator-parking-rules.md` — parking permit types and rules in detail
+- `docs/umd-bill-estimator-data-sources.md` — every scrape source URL, organized by category
 
 **Archived, do not read unless explicitly asked:**
 - `docs/umd-bill-estimator-getting-started-checklist.md` — the original pre-project research/setup checklist. Served its purpose getting the project off the ground; superseded by the two files above once real build work started. Marked archived at the top of the file itself too.

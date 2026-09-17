@@ -95,6 +95,66 @@ export type Database = {
           },
         ]
       }
+      ai_parse_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          provider: string
+          success: boolean
+          tool_call_output: Json | null
+          user_id: string | null
+          user_message: string
+          validation_errors: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider: string
+          success?: boolean
+          tool_call_output?: Json | null
+          user_id?: string | null
+          user_message: string
+          validation_errors?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider?: string
+          success?: boolean
+          tool_call_output?: Json | null
+          user_id?: string | null
+          user_message?: string
+          validation_errors?: string[] | null
+        }
+        Relationships: []
+      }
+      ai_rate_limits: {
+        Row: {
+          identifier: string
+          request_count: number
+          window_kind: string
+          window_start: string
+        }
+        Insert: {
+          identifier: string
+          request_count?: number
+          window_kind: string
+          window_start: string
+        }
+        Update: {
+          identifier?: string
+          request_count?: number
+          window_kind?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       block_dining_plans: {
         Row: {
           academic_year_id: string
@@ -889,7 +949,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_and_consume_ai_rate_limit: {
+        Args: {
+          p_duration_seconds: number
+          p_identifier: string
+          p_limit: number
+          p_window_kind: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

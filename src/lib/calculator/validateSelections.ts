@@ -1,13 +1,12 @@
 import {
   APARTMENT_BUILDING_CATEGORY,
   COMMUTER_PARKING_PERMIT_TYPE,
+  MAX_CREDIT_HOURS,
+  MIN_CREDIT_HOURS,
   OVERNIGHT_STORAGE_PARKING_PERMIT_TYPE,
   RESIDENT_PARKING_PERMIT_TYPE,
 } from "./constants";
 import type { Selections } from "./types";
-
-const MIN_CREDIT_HOURS = 1;
-const MAX_CREDIT_HOURS = 20;
 
 export type ValidationError = {
   // Which selection this reason is about, so the UI can point at the right field.

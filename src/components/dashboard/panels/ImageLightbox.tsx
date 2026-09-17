@@ -12,7 +12,22 @@ import { Button } from "@/components/ui/button";
 // one is styled as a small centered card (the note-prompt use case), and a
 // full-bleed centered photo with a dark backdrop needs different styling
 // entirely, not an override of the card look.
-export function ImageLightbox({ urls, alt }: { urls: string[]; alt: string }) {
+export function ImageLightbox({
+  urls,
+  alt,
+  trigger,
+}: {
+  urls: string[];
+  alt: string;
+  // Optional custom trigger element (e.g. a visible photo thumbnail in a
+  // chat bubble) that replaces the default "Expand" / "View more photos"
+  // pill button entirely. Passed straight to DialogPrimitive.Trigger's
+  // `render` prop -- same asChild-style merge (Trigger's own onClick/aria
+  // props land on it) the default Button trigger below already relies on --
+  // so the full-screen popup, backdrop, and prev/next logic underneath is
+  // reused as-is, not duplicated by the caller.
+  trigger?: React.ReactElement;
+}) {
   const [index, setIndex] = useState(0);
 
   if (urls.length === 0) return null;
@@ -29,12 +44,16 @@ export function ImageLightbox({ urls, alt }: { urls: string[]; alt: string }) {
     // wherever it was left last time -- opening should always start from
     // the same photo the thumbnail row is already showing.
     <DialogPrimitive.Root onOpenChange={(open) => open && setIndex(0)}>
-      <DialogPrimitive.Trigger
-        render={<Button type="button" variant="outline" size="sm" className="w-fit rounded-full" />}
-      >
-        <ExpandIcon className="size-4" />
-        {urls.length > 1 ? "View more photos" : "Expand"}
-      </DialogPrimitive.Trigger>
+      {trigger ? (
+        <DialogPrimitive.Trigger render={trigger} />
+      ) : (
+        <DialogPrimitive.Trigger
+          render={<Button type="button" variant="outline" size="sm" className="w-fit rounded-full" />}
+        >
+          <ExpandIcon className="size-4" />
+          {urls.length > 1 ? "View more photos" : "Expand"}
+        </DialogPrimitive.Trigger>
+      )}
 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/70 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
