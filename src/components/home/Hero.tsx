@@ -38,7 +38,9 @@ export function Hero() {
         alt=""
         width={290}
         height={430}
-        className="pointer-events-none absolute top-32 left-4 -z-10 w-40 -rotate-12 opacity-10 md:top-12 md:left-1/2 md:-translate-x-1/2"
+        // dark:invert -- black line art is invisible on the dark palette's
+        // background otherwise; inverting turns it into white line art.
+        className="pointer-events-none absolute top-32 left-4 -z-10 w-40 -rotate-12 opacity-10 md:top-12 md:left-1/2 md:-translate-x-1/2 dark:invert"
       />
 
       {/* Written-paper illustration. The md: position/size below is exactly
@@ -59,7 +61,8 @@ export function Hero() {
         alt=""
         width={230}
         height={340}
-        className="pointer-events-none absolute top-8 left-52 -z-10 w-28 rotate-6 opacity-10 md:top-50 md:left-1/2 md:w-44 md:translate-x-35"
+        // dark:invert -- see calculator illustration above for why.
+        className="pointer-events-none absolute top-8 left-52 -z-10 w-28 rotate-6 opacity-10 md:top-50 md:left-1/2 md:w-44 md:translate-x-35 dark:invert"
         style={{
           maskImage: "radial-gradient(circle at top left, rgba(0,0,0,0.4) 0%, black 40%)",
           WebkitMaskImage: "radial-gradient(circle at top left, rgba(0,0,0,0.4) 0%, black 40%)",
@@ -81,7 +84,8 @@ export function Hero() {
         alt=""
         width={110}
         height={630}
-        className="pointer-events-none absolute top-52 left-64 -z-10 w-8 -rotate-16 opacity-10 md:top-[25rem] md:left-1/2 md:w-10 md:translate-x-2"
+        // dark:invert -- see calculator illustration above for why.
+        className="pointer-events-none absolute top-52 left-64 -z-10 w-8 -rotate-16 opacity-10 md:top-[25rem] md:left-1/2 md:w-10 md:translate-x-2 dark:invert"
         style={{
           maskImage: "radial-gradient(circle at bottom right, rgba(0,0,0,0.4) 0%, black 40%)",
           WebkitMaskImage: "radial-gradient(circle at bottom right, rgba(0,0,0,0.4) 0%, black 40%)",
@@ -104,7 +108,8 @@ export function Hero() {
         alt=""
         width={3130}
         height={1376}
-        className="pointer-events-none absolute bottom-0 left-0 -z-10 w-80 opacity-50 md:w-[37rem]"
+        // dark:invert -- see calculator illustration above for why.
+        className="pointer-events-none absolute bottom-0 left-0 -z-10 w-80 opacity-50 md:w-[37rem] dark:invert"
         style={{
           maskImage:
             "linear-gradient(to right, black 55%, transparent 95%), linear-gradient(to bottom, transparent 0%, black 35%)",
@@ -198,10 +203,26 @@ export function Hero() {
         </CardContent>
       </Card>
 
-      {/* Placement per the rough sketch: near the seam between the two columns,
-          vertically centered. Only positioned this way at md+ -- on mobile it's
-          just centered in normal document flow. */}
-      <div className="animate-fade-in-up mt-4 flex flex-col gap-2 [animation-delay:400ms] sm:flex-row md:absolute md:top-1/2 md:-right-8 md:mt-0 md:-translate-y-1/2 md:flex-col">
+      {/* Centered in the Hero section's open space to the right of the text
+          cards (not right-anchored near the seam like before, per feedback
+          that hugging the right edge read as off-center) -- but a flat
+          left-1/2 or left-[70%] both overshot or undershot depending on
+          viewport, since the cards' zone is a *fixed* width (max-w-xs cards
+          + px-12 padding = 22rem, confirmed via getBoundingClientRect: the
+          steps card's right edge sits at 352px regardless of viewport) while
+          the section itself is a *percentage* of viewport (page.tsx's
+          3fr_2fr split) -- so any single fixed percentage is only correctly
+          centered at one specific width. calc(22rem + (100% - 22rem) / 2)
+          instead computes the true midpoint of the *actual remaining gap*
+          (from the cards' fixed right edge to the section's own right edge,
+          whatever that is at the current viewport) every time, so this
+          stays centered in that gap across breakpoints rather than just at
+          the one width it was eyeballed against. -translate-x-1/2 (paired
+          with top-1/2 + -translate-y-1/2) then centers the button group
+          itself on that midpoint. Only positioned this way at md+ -- on
+          mobile it's just centered in normal document flow via the
+          section's own items-center. */}
+      <div className="animate-fade-in-up mt-4 flex flex-col items-center gap-2 [animation-delay:400ms] sm:flex-row md:absolute md:top-1/2 md:left-[calc(22rem_+_(100%-22rem)/2)] md:mt-0 md:-translate-x-1/2 md:-translate-y-1/2 md:flex-col">
         {/* Overriding size="lg"'s default height/padding here rather than
             editing button.tsx -- keeps "lg" generic for buttons elsewhere,
             this is just how big *these two* need to be. */}

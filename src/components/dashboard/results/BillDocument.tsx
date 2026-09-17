@@ -155,6 +155,17 @@ export function BillDocument({ selections, rates }: { selections: DashboardSelec
           </tbody>
         </table>
       </section>
+
+      {/* Accuracy caveat -- a different concern from the header's affiliation
+          disclaimer above. That one says who built this; this one says the
+          number itself is an estimate, not a guarantee. Worth stating plainly
+          here since this document is the one artifact that leaves the live
+          app (printed, screenshotted, saved as PDF) and could otherwise be
+          mistaken for an official figure once it's out of context. */}
+      <p className="mt-8 border-t border-black/20 pt-4 text-xs text-black/50">
+        This is an estimate based on published UMD rates and the selections above -- actual charges from the
+        University of Maryland may differ. Always confirm your official bill through UMD&apos;s own billing systems.
+      </p>
     </div>
   );
 }

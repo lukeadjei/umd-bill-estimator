@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,23 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
   // floored at 0, see its own comment).
   const isRefund = aid > 0 && showAfterAid && displayTotal < 0;
 
+  // CSS alone can't tell "this specific value changed" from "this component
+  // re-rendered" -- so a ref tracks the previous displayTotal across
+  // renders, and this effect diffs against it. Starts at null specifically
+  // so the very first render (nothing to compare against yet) doesn't count
+  // as a change and doesn't pulse on initial mount.
+  const previousTotalRef = useRef<number | null>(null);
+  const [pulseTotal, setPulseTotal] = useState(false);
+  useEffect(() => {
+    if (previousTotalRef.current !== null && previousTotalRef.current !== displayTotal) {
+      setPulseTotal(true);
+      const timeout = setTimeout(() => setPulseTotal(false), 300);
+      previousTotalRef.current = displayTotal;
+      return () => clearTimeout(timeout);
+    }
+    previousTotalRef.current = displayTotal;
+  }, [displayTotal]);
+
   async function handleSave() {
     setSaveState({ status: "saving" });
     setNoteDialogOpen(false);
@@ -73,7 +90,7 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
   }
 
   return (
-    <div className="sticky bottom-0 z-30 flex items-center justify-between gap-4 rounded-none border-t border-border bg-card/95 px-4 py-4 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] backdrop-blur md:px-6">
+    <div className="sticky bottom-0 z-30 flex flex-col gap-3 rounded-none border-t border-border bg-card/95 px-4 py-4 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6">
       <div>
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
@@ -94,15 +111,27 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
         </div>
         {validation.valid ? (
           isRefund ? (
-            <p className="font-heading text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+            <p
+              className={`font-heading text-3xl font-bold text-emerald-600 dark:text-emerald-400 ${pulseTotal ? "animate-total-pulse" : ""}`}
+            >
               +{formatCurrency(Math.abs(displayTotal))}
               <span className="ml-2 text-base font-medium">Estimated refund</span>
             </p>
           ) : (
-            <p className="font-heading text-3xl font-bold text-foreground">{formatCurrency(displayTotal)}</p>
+            <p className={`font-heading text-3xl font-bold text-foreground ${pulseTotal ? "animate-total-pulse" : ""}`}>
+              {formatCurrency(displayTotal)}
+            </p>
           )
         ) : (
           <p className="font-heading text-3xl font-bold text-muted-foreground">Fix errors to see total</p>
+        )}
+        {/* Accuracy caveat, distinct from the footer's affiliation disclaimer
+            -- this is about the number itself possibly being wrong (rates
+            change, edge cases in eligibility, etc.), not about who built the
+            site. Only shown alongside an actual dollar figure; there's
+            nothing to caveat when validation errors are hiding the total. */}
+        {validation.valid && (
+          <p className="mt-1 text-xs text-muted-foreground">Estimate only -- actual UMD charges may differ.</p>
         )}
         {validation.errors.length > 0 && (
           <ul className="mt-1.5 flex flex-col gap-0.5">
@@ -118,7 +147,7 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex items-center gap-2 sm:shrink-0">
         {/* Generate never touches the database -- it just navigates to a
             page that reads the current selections back out of sessionStorage
             and formats them for printing/PDF -- so unlike Save, it's

@@ -39,11 +39,20 @@ export function PanelNavArrows({ activeTab, onTabChange }: { activeTab: TabId; o
 
   return (
     <>
+      {/* Anchored at a fixed offset from the panel's top edge, not vertically
+          centered on the whole container -- centering used to put these
+          wherever the container's height happened to land, which varies a
+          lot by panel/selection state (e.g. a dining tier vs. not), and on
+          taller renders the arrows drifted down far enough to overlap real
+          controls underneath them (confirmed live: blocked a button on the
+          Meals panel, sat over description text on Aid & Grants). A fixed
+          top offset roughly level with each panel's heading is predictable
+          regardless of content height -- never drifts into content below it. */}
       <Button
         type="button"
         variant="outline"
         size="icon"
-        className="absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full disabled:opacity-0"
+        className="absolute top-10 left-2 z-10 rounded-full disabled:opacity-0"
         onClick={() => previousTab && onTabChange(previousTab.id)}
         disabled={!previousTab}
         aria-label="Previous section"
@@ -54,7 +63,7 @@ export function PanelNavArrows({ activeTab, onTabChange }: { activeTab: TabId; o
         type="button"
         variant="outline"
         size="icon"
-        className="absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full disabled:opacity-0"
+        className="absolute top-10 right-2 z-10 rounded-full disabled:opacity-0"
         onClick={() => nextTab && onTabChange(nextTab.id)}
         disabled={!nextTab}
         aria-label="Next section"

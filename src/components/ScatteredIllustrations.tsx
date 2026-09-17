@@ -36,7 +36,13 @@ export function ScatteredIllustrations({ layout }: { layout: readonly ScatterIte
             alt=""
             width={icon.w}
             height={icon.h}
-            className={`absolute ${item.size}`}
+            // dark:invert -- these SVGs are black line art (stroke:#000000)
+            // on a transparent fill, which is invisible against a dark
+            // background. Inverting flips them to white line art, which
+            // reads the same "faint sketch" way against the dark palette's
+            // background. No new asset files needed since it's simple
+            // single-color line art.
+            className={`absolute ${item.size} dark:invert`}
             style={{
               top: item.top,
               left: item.left,

@@ -275,7 +275,17 @@ export function DashboardShell({
         <div className="flex min-w-0 flex-col gap-4">
           <ProgressChecklist visited={visitedTabs} />
 
-          <div className="animate-fade-in-up relative flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]">
+          {/* key={activeTab} forces a remount on every tab switch so the
+              fade-in-up animation replays each time -- otherwise this div
+              only mounts once (on first dashboard load) since only the
+              ActivePanel swap below changes, not this wrapper. Safe to
+              remount: the state that must survive tab switches (selections)
+              lives in DashboardShell itself, passed down as a prop -- this
+              div and its children hold no state of their own. */}
+          <div
+            key={activeTab}
+            className="animate-fade-in-up relative flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]"
+          >
             <PanelNavArrows activeTab={activeTab} onTabChange={handleTabChange} />
             <ActivePanel
               selections={selections}

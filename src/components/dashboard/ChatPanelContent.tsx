@@ -162,7 +162,15 @@ export function ChatPanelContent({
 
         <div className="flex flex-col gap-3">
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex flex-col gap-1.5 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+            // msg.id is a fresh crypto.randomUUID() per message (both user
+            // and assistant, see sendMessage above), so each new message is
+            // a genuinely new key -- React mounts it fresh and the fade-in
+            // plays once, while earlier messages already in the array keep
+            // their existing keys and never remount/replay on re-render.
+            <div
+              key={msg.id}
+              className={`animate-fade-in-up flex flex-col gap-1.5 ${msg.role === "user" ? "items-end" : "items-start"}`}
+            >
               <div
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                   msg.role === "user"
