@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito, Playfair_Display, Spicy_Rice } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { Footer } from "@/components/layout/Footer";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import "./globals.css";
@@ -121,6 +122,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             pushing the footer down instead of leaving it floating mid-page. */}
         <div className="flex flex-1 flex-col">{children}</div>
         <Footer />
+        {/* Vercel Web Analytics -- only actually collects data once "Web
+            Analytics" is turned on for this project in the Vercel dashboard;
+            this component alone is a no-op locally/until that's enabled. */}
+        <Analytics />
       </body>
     </html>
   );
