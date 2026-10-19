@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project
 UMD Bill Estimator — a web app that estimates a University of Maryland student's total cost (tuition, fees, housing, dining, parking) by combining official UMD rate data with a student's own selections. This is a personal portfolio/resume project, not an official UMD product — the UI must always make clear it's unofficial and unaffiliated.
 
@@ -8,6 +10,24 @@ UMD Bill Estimator — a web app that estimates a University of Maryland student
 - Supabase (Postgres + Auth) — main database and user accounts
 - AWS: S3 (hall photos), Lambda (scheduled scraper), EventBridge Scheduler (triggers Lambda), IAM (least-privilege roles between them)
 - AI: Claude or Gemini API via function calling, for natural-language input parsing
+
+## Commands
+Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, build.
+- `npm run dev` / `npm run build` / `npm run lint`
+- `npm test` (Vitest, run once) · `npm run test:watch` · single file: `npx vitest run src/lib/calculator/calculateTotal.test.ts` · single test: add `-t "name"`
+- Scraper scripts load `.env.local` via `tsx --env-file`: `npm run scrape` (fills `_staging` tables), `npm run promote` (staging → live; manual, deliberately never automated), `npm run academic-year:create` / `academic-year:activate`
+- `npm run build:lambda` — compiles the scraper for AWS Lambda into `dist/lambda` (`tsconfig.lambda.json`, `scraper/lambda-package.json`)
+- DB changes are timestamped SQL files in `supabase/migrations/`; `src/lib/supabase/database.types.ts` holds the generated types.
+
+**Next.js here is v16 and differs from older versions** (see `AGENTS.md`): read the relevant guide in `node_modules/next/dist/docs/` before writing Next-specific code. Example: request interception lives in `src/proxy.ts`, not `middleware.ts`.
+
+## Architecture map
+- `src/lib/calculator/` — the pure engine: `calculateTotal`, `validateSelections`, and `verifyAiPatch` (validates AI output against live rate data). Tests sit beside the source.
+- `src/lib/ai/` — chat feature behind the `AiProvider` interface (`providers/`, currently Gemini; chosen via `getProvider.ts`). `tools/` holds the function-calling tools (`setSelections`, `evaluateBudget`, `getHousingPhotos`). `verifyReplyText.ts` checks dollar figures in model replies against tool results. `rateLimit.ts` and `logging.ts` use the `ai_rate_limits` / `ai_parse_logs` tables. The only HTTP entry point is `src/app/api/chat/route.ts`.
+- `src/lib/supabase/` — `getRatesBundle.ts` loads all rate tables for an academic year into the shape the calculator takes. `scenarios.ts` handles saves. Scenario writes go through the service-role client, which bypasses RLS, so every query must filter on the verified session's `user_id` explicitly.
+- `src/app/` — Server Components read Supabase directly. Mutations are Server Actions (`dashboard/actions.ts`, `settings/actions.ts`). `dashboard/results` renders the printable bill using the same breakdown functions as the dashboard.
+- `src/components/dashboard/` — client-side selection state (`selections.ts`), `panels/` for each step, `results/` for the bill view. Dashboard selections persist in `sessionStorage`.
+- `scraper/` — one `fetch*Page.ts` per UMD source, then `writeToStaging.ts`, then `promoteStaging.ts`. `lambdaHandler.ts` is the scheduled entry point (EventBridge, monthly).
 
 ## Critical rules — do not violate these
 
