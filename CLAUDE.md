@@ -69,6 +69,8 @@ Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, b
 
 - Before creating a new folder anywhere in the codebase, check whether a folder with that name (or a near-duplicate purpose) already exists elsewhere in the tree — don't create a second `panels/`, `actions.ts`, etc. in a different location when an existing one already serves that role, and don't give two different folders overlapping names/purposes. Keep new files/folders organized consistently with the existing structure rather than bolting on a parallel convention.
 
+- Every UI feature must be designed for mobile as well as desktop — when adding or changing something for one, make sure it fits the other (check at a ~375px viewport) rather than treating mobile as an afterthought. Use responsive CSS breakpoints, not device detection.
+
 ## Working style with the developer
 
 This project is meant to reflect genuine engineering care — the goal is code the developer deeply understands and can explain, not just code that works. Calibrate what to build autonomously vs. what to work through together:
