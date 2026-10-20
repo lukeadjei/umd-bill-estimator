@@ -13,13 +13,102 @@ For how the app is currently built, see `docs/BUILD-REFERENCE.md`. Older session
 ## v2 `[OPEN]`
 
 ### Goal
-_To be defined with the developer._
+Add a **Winter Session** estimate alongside Fall and Spring, without breaking any saved Fall/Spring scenario. Winter is a different, much simpler bill than a semester: per-credit tuition plus one flat winter fee. Everything else in the app (major, housing, meals, parking, health insurance, differential tuition) does not apply.
 
 ### Plan
-_To be defined._
+
+**Source facts** (UMD Extended Studies winter page: `exst.umd.edu/current-incoming-and-former-umd-students/winter-session/tuition-and-fees`; raw HTML checked 2026-10-20):
+- Winter 2027 is Jan 4–22, 2027. It belongs to the **current** academic year (2026-2027) — no new `academic_years` row.
+- Tuition is published as a chart of **total price per credit count** (1–4 credits) by level × residency. Today every N-credit price happens to equal N × the 1-credit price (UG resident $459/$918/$1,377/$1,836; UG non-resident $1,762…; Grad resident $913…; Grad non-resident $1,916…), but we store the chart as published, one row per credit count, and never multiply.
+- Flat fees, both apply to undergrad and grad: **Winter Campus Services Fee $116** and **Winter Distance Learning Fee $55**. Rule (confirmed by the developer): **any in-person class → only the $116 fee, even alongside online classes; only online classes → only the $55 fee.** The student picks; the app can't know which sections they'll take.
+- The page says nothing about differential tuition, health insurance, housing, dining, parking, or financial aid.
+
+**Why existing saves are safe:** `scenarios.semester` is plain `text NOT NULL` with no CHECK constraint, and scenarios store rate-row ids, not copies of prices. Winter is added with new tables / new nullable columns only — no type changes, no backfill, nothing existing is altered. The real risk is in code, not the DB: several places treat "not fall" as "spring" and would compile fine with a third value —
+- `calculateTotal.ts` `calculateInsurance` / `calculateDining`: `semester === "fall" ? fall_price : spring_price` (winter would silently get spring prices)
+- `scenarios.ts` `buildSelectionsFromScenarioRow`: `semester === "spring" ? "spring" : "fall"` (a saved winter scenario would load as fall)
+- `=== "fall" ? "Fall" : "Spring"` labels in `actions.ts` (save name), `BillDocument.tsx`, `SummaryBar.tsx`, `CostBreakdown.tsx`, `ChatBudgetComparison.tsx`, `chatSelectionsFormat.ts`
+- `verifyAiPatch.ts` `SEMESTER_VALUES`, `describeSelections.ts` (cheapest plan uses `fall_price` only)
+- `Semester` is redeclared locally in `CostBreakdown`, `DashboardNav`, `SummaryBar`, `SemesterToggle` (5 copies of the type)
+
+So the first change is a **no-behavior-change refactor** that makes every one of these exhaustive over a single `Semester` type, so adding `"winter"` makes the compiler list every spot needing a decision. Existing fall/spring tests must pass untouched.
+
+**Schema (decided):**
+- `winter_tuition_rates` (undergrad) and `winter_graduate_tuition_rates` (grad): `academic_year_id` FK, `residency`, `credit_hours`, `price` — **one row per credit count** (the published total for that many credits). Unique on (`academic_year_id`, `residency`, `credit_hours`). Two tables mirroring the existing undergrad/grad split (education level = which table you query).
+- `winter_fees`: `academic_year_id` FK, `campus_services_rate`, `distance_learning_rate`.
+- `academic_years.winter_max_credit_hours` — **nullable integer, 4 for 2026-2027 (confirmed by the developer as winter's maximum)**. Null means "no winter configured for this year", which also drives hiding the Winter option (see edge cases). Hand-set policy number, **deliberately not on the scrape → staging → promote path** (unlike the two existing thresholds, which are scraped from the tuition page): it appears on no page we scrape, and if it were staged, an old Lambda that hasn't been redeployed yet would stage a row without it and the next `promote` would write null into live, silently hiding Winter. Seeded to 4 in the migration; `createAcademicYear.ts` copies it forward from the current year; `promoteStaging.ts` must never touch it. Validation checks the cap from here, never a hardcoded 4.
+- A `_staging` twin for each new table (6 new tables total); no staging column for the cap. Live tables: RLS on + public `select`; staging: RLS on, no policies.
+- `scenarios`: two new **nullable** booleans recording the fee choices. Winter saves reuse existing columns (`tuition_rate_id` / `graduate_tuition_rate_id`, `credit_hours`, `semester = 'winter'`); the other id columns stay null.
+- Scraper: new winter fetcher feeding the new staging tables (a sanity check that each level × residency yields exactly credit counts 1..cap). `promoteStaging.ts` uses explicit column lists, so it must be updated for the new tables/columns or they'd be silently dropped.
+
+**Engine (decided direction, details designed together):** winter gets its own distinct shape in the types, not a flag on the existing one.
+- `Selections` becomes a **discriminated union on `semester`**: the existing fall/spring shape, and a `WinterSelections` shape holding only what winter uses (education level, residency, credit hours, the two fee choices, grants — **no major**: major only matters for differential tuition, which doesn't apply in winter). A winter selection can't even carry housing/dining/parking/insurance/differential — illegal states are unrepresentable. Because switching into winter resets everything (below), this fits the app's real behavior.
+- `RatesBundle` gets a separate winter section (winter tuition rows, winter fees, the cap), `null`/absent for a year with no winter data.
+- `calculateTotal` stays the single entry point for prices (rule 1) and dispatches on `selections.semester`; winter routes to winter-only pricing functions that read only the winter section. `validateSelections` dispatches the same way, with winter-specific rules (level, residency, credits 1..cap, fee choice required). Rules 2–4 still hold: pure functions, recompute from scratch, calculation never judges missing selections.
+- Every consumer that reads `.housing` etc. must narrow on `semester` first — the compiler enforces it, which is the same safety the refactor above is for.
+- `calculateAid` / `calculateNetTotal` work for winter too (grants live on both shapes).
+
+**Fee selection (decided):** two manual toggles in the winter panel: "at least one of my classes is in person / on campus" and "all of my classes are fully online / distance learning". Priced as: in-person toggle on → $116 only; only online toggle on → $55 only; neither answered → fee line is $0 and `validateSelections` reports it required for winter. The panel shows a **prominent callout** explaining exactly how the fee works (any in-person class = campus fee only; online-only = distance fee only; not both). No need to know UMD's section codes — the student decides.
+
+**Winter UI (decided direction):** one dashboard shell, not a separate dashboard.
+- `SemesterToggle` becomes Fall / Spring / Winter (hidden/unavailable winter when the year has no winter data).
+- A term-aware tab list (`getTabItems(semester)`): winter shows only **Tuition** and **Aid & Grants**; other tabs are hidden (not disabled). The nav, prev/next arrows and progress checklist all read the one tab list, and there's no tab gating in the app (only Save/Generate are gated by `validation.valid`), so no new "can move on" system is needed.
+- A separate `WinterTuitionPanel` (education level, residency, credits 1..cap, fee toggles + callout); the existing `TuitionPanel` is untouched.
+- Cost breakdown / summary bar / printed bill show only the winter lines (tuition, winter fee, aid).
+- **Aid & Grants stays** in winter: UMD doesn't award winter aid, but a student can still enter any aid they expect, and a negative net total shows as an estimated refund like everywhere else.
+
+**Switching into / out of Winter:** crossing the winter boundary shows a confirmation `AlertDialog`. Fall ↔ Spring switching is unchanged (no prompt). Everything resets except **education level** and **residency**. The dialog says the entered data will be lost and suggests signing in to save the scenario, or using Generate to save a PDF, first. Only prompt if the student has actually entered something beyond the defaults.
+
+**AI chat (decided, later step):** chat will support winter, but as its own build step after the core winter flow ships (extend the semester enum, prompt, tools and `describeSelections` for the winter shape).
+
+**Edge cases to handle:**
+- An academic year without winter data (e.g. right after a rollover, before winter is published — `winter_max_credit_hours` null or no winter rows): Winter must be unavailable rather than letting `findOrThrow` throw.
+- Winter scenarios loaded from Saved Scenarios: tuition id → education level/residency, `semester` must round-trip as `'winter'`, never fall back to fall.
+- Existing NOT NULL scenario columns (`living_situation`, `insurance_selected`, `applies_differential_tuition`) get neutral values on a winter save.
+
+**Mobile & responsive refactor (second v2 workstream, planned with the developer 2026-10-20):** make the mobile layout more consistent and easier to extend, and add desktop improvements alongside it (desktop items still to be described).
+- **Problem (observed at 375px, 2026-10-20):**
+  - The sticky header packs three things into one row: the tab bar (573px of content in a 375px viewport, cut off at "Tuiti…"), the semester toggle, and the Sign-in pill. The theme toggle is `position: fixed` top-right and **overlaps the Sign-in pill** once the page scrolls.
+  - The step list is shown twice: in the scrolling tab bar *and* in the Progress card's chips. The chips are plain `<span>`s, not links, so the one place all six steps are fully visible can't be used to navigate.
+  - The sticky bottom `SummaryBar` takes ~25% of the viewport when validation errors show (four red lines plus the total plus buttons). `ChatFab` is `fixed bottom-24`, a guess at the bar's height, so it overlaps the bar when the bar grows.
+  - The cost breakdown card plus the summary bar plus the panel stack makes a long scroll (~1,400px page).
+- **Direction:** on small screens, replace the scrolling tab bar with a **step pill** (e.g. "Tuition · 2 of 6 ▾") that opens a **vertical list of every tab** — kept from the developer's idea, with two changes: the pill always shows "N of total" so a first-time visitor knows more steps exist, and the list **replaces the separate Progress card on mobile** (the list carries the visited checkmarks), removing the duplicate. Reuse the existing tab list (`tabs.ts` / `getTabItems`). Add Back/Next buttons at the bottom of the panel (thumb reach) instead of the overlaid chevrons on mobile.
+- **Other cramped-space fixes to include:**
+  - Header: only the step pill and the semester control in the sticky row; Sign in / account and the theme toggle move into one overflow/account menu (no more fixed-position theme toggle colliding with the nav).
+  - `SummaryBar`: compact by default (total + primary button); validation errors collapse into an expandable "N things to fix" line instead of always listing every message.
+  - `ChatFab`: position it relative to the summary bar (or fold chat into the bar) so it can't overlap as the bar changes height.
+  - Cost breakdown: collapsed by default on mobile ("See breakdown").
+  - Semester control: with winter it becomes three options; check it fits at 375px or use a compact select.
+- **Make the AI assistant discoverable (developer suspects v1 users never noticed it; design freedom given — decide details when the UI work starts):** today it's a 36px icon-only chat bubble on mobile (bottom-right, where "support chat" widgets usually live) with nothing explaining what it does. Plan:
+  - Replace the icon-only `ChatFab` with a **labeled pill** (sparkle icon + short text such as "Ask the assistant" / "Fill this out for me"), placed so it can't collide with the summary bar.
+  - A **dismissible first-visit card** at the top of the dashboard saying what the assistant does ("describe yourself and it fills this out"), with **tappable example chips** (e.g. "In-state sophomore, 15 credits, living in a double") that open the chat with that message ready to send.
+  - **One gentle nudge** on the button (tooltip or brief pulse), once per visitor, remembered in `localStorage` (wrapped in try/catch), stopped for good after they open the chat.
+  - **In-context entry points:** an "Ask assistant" item in the mobile step list, and a short "Not sure what to pick? Ask the assistant" line on the Tuition panel.
+  - **Homepage mention:** add the assistant to the front page (e.g. a card or line in the existing preview/description cards) — do this as part of this task.
+  - Check the desktop entry point's visibility at the same time and apply the same labeling.
+  - Not doing usage tracking: the developer is on Vercel's free plan, which can't take custom analytics events. If measuring is wanted later, it would be our own counter and a `/privacy` update.
+- **Responsive approach:** use CSS breakpoints (Tailwind), not user-agent/"is mobile" detection — no hydration mismatch, works on resize and tablets. The repo already has `dropdown-menu.tsx`, `Sheet` and `Dialog` primitives to build on.
+- **Consistency pass:** audit the other cramped spots (summary bar, aid panel, chat panel/sheet), tap-target sizes and spacing so new panels follow one pattern.
+- **Sequencing:** this is UI-only and independent of the database/engine winter work. Do it **before** the winter dashboard UI task so winter's third toggle option and reduced tab list land on the new nav instead of being built twice. It overlaps the backlog's accessibility pass (keyboard nav/aria for the new dropdown), so fold the nav's accessibility in here.
+
+### Open questions
+- [x] Pre-flight scenario count (2026-10-20, read-only): 3 saved scenarios, all `semester = 'fall'`, all in the current academic year. No unexpected values, so the old `scenarios.ts` fallback never masked anything and exposure is tiny.
+- [ ] Union design details (work through together): exact `WinterSelections` / winter `RatesBundle` shapes, how the dashboard's `DashboardSelections` (fall/spring side carries `major`) maps onto the union, and how `sessionStorage` persistence handles the reset-on-switch.
+- [ ] Mobile/responsive refactor: confirm the revised direction (step pill with "N of total", list replacing the Progress card on mobile, header/summary-bar/FAB changes). "Desktop additions" means: any new desktop UI feature must also be designed for mobile (now a standing rule in CLAUDE.md), not a separate desktop feature list.
 
 ### Tasks
-- [ ] _None yet._
+Ordered so each step is safe before the next depends on it; nothing can create a winter scenario until every path handles it, so the UI comes late and AI last.
+
+**Order decision (2026-10-20):** work in numeric order. Task 1 first (it touches the same UI files the mobile work does, so doing it first avoids conflicts), then winter backend (2–6), then the mobile rework (7), then winter dashboard UI (8) so winter's third toggle option and two-tab list land on the new nav instead of being built twice. Task 7 doesn't depend on tasks 2–6, so it *may* be done earlier or in parallel if convenient, but the default is the order below.
+- [ ] 1. Refactor: single exported `Semester` type; replace every `=== "fall" ? … : …` ternary and the `scenarios.ts` fallback with exhaustive `Record<Semester, …>` / `switch`. No behavior change; existing tests pass untouched. (Optional pre-flight scenario count first.)
+- [ ] 2. Migration (additive only): 3 winter rate tables + 3 staging twins, `academic_years.winter_max_credit_hours` (seeded to 4, no staging column), RLS, two nullable `scenarios` booleans. `supabase db push`, regenerate `database.types.ts`, re-run the session-start schema check.
+- [ ] 3. Scraper + real data: winter fetcher, `writeToStaging`, `promoteStaging` (explicit column lists), `createAcademicYear` copy of the cap, `runScrape`/Lambda group. Run for real against 2026-2027, review staging, then promote. **Manual AWS step by the developer:** `npm run build:lambda`, zip `dist/lambda`, upload it in the Lambda console — Vercel never deploys the Lambda. Do this soon after the migration (before the next monthly run on the 1st); the old Lambda keeps working for fall/spring in the meantime and simply doesn't scrape winter. Optional later: automate the upload (AWS CLI or a GitHub Action), which needs a new least-privilege deploy credential — a separate decision.
+- [ ] 4. Types + data loading (together): discriminated `Selections` union, winter section on `RatesBundle`, `getRatesBundle*` tolerating a year with no winter data.
+- [ ] 5. Engine (together): winter pricing functions, `calculateTotal` / `validateSelections` dispatch on `semester`, unit tests including a fall/spring regression suite.
+- [ ] 6. Scenarios: save/load/delete for winter (`actions.ts`, `scenarios.ts`), save name, past-year lock unchanged.
+- [ ] 7. Mobile & responsive refactor (can start any time after task 1 — UI-only, independent of tasks 2–6; must land before task 8): step pill + vertical step list (replacing the mobile Progress card), header/account/theme menu, compact `SummaryBar` with collapsible errors, `ChatFab` placement, collapsible breakdown, Back/Next at panel bottom, consistency pass, nav accessibility; **assistant discoverability** (labeled pill, first-visit card with example chips, one-time nudge, step-list and Tuition-panel entry points) and **a homepage mention of the AI assistant**.
+- [ ] 8. Dashboard UI for winter: three-way toggle, `getTabItems`, `WinterTuitionPanel` + fee toggles + callout, switch-confirmation dialog, winter rows in SummaryBar/CostBreakdown/BillDocument/results; dark mode check.
+- [ ] 9. AI chat winter support: semester enum, system prompt, tools, `describeSelections`, `verifyAiPatch`, reply checks, tests.
+- [ ] 10. Docs: update `docs/BUILD-REFERENCE.md` (new tables, scraper source, winter engine path); winter disclaimer wording on the bill.
 
 ### Backlog (carried over from v1)
 - [ ] Accessibility pass — keyboard navigation, aria labels, color contrast audit
@@ -32,6 +121,11 @@ _To be defined._
 
 ### Work log
 _(newest first)_
+- **2026-10-20 (Lambda deploy)** — Planning only. Confirmed scraper changes need a manual rebuild + zip + console upload of the Lambda. Found (from `writeToStaging.ts` / `promoteStaging.ts`) that staging the winter cap could null it in live if an un-redeployed Lambda ran first, so the cap is now hand-set, kept out of the staging/promote path. Tasks 2–3 updated. No code changed.
+- **2026-10-20 (assistant discoverability)** — Planning only. Added assistant-discoverability work (labeled button, first-visit card with example chips, one-time nudge, extra entry points, homepage mention) to task 7. No usage tracking (Vercel free plan). No code changed.
+- **2026-10-20 (mobile findings)** — Ran the read-only scenario count (3 rows, all fall). Looked at the live dashboard at 375px (dev server, then stopped it) and wrote the observed problems and revised mobile direction into the plan above. No code changed.
+- **2026-10-20 (later)** — Planning only. Confirmed: winter has no major and only the Tuition and Aid & Grants tabs; winter max is 4 credits (seeded into `winter_max_credit_hours`). Added the mobile/responsive refactor as a second v2 workstream (task 7, ahead of the winter dashboard UI); renumbered tasks.
+- **2026-10-20** — Planning only, no code. Restructured docs (this file, trimmed `BUILD-REFERENCE.md`, archived `PROGRESS-LOG.md`, deleted `POLISH-CHECKLIST.md`). Verified the live schema matches `database.types.ts` and all 11 migrations are applied. Researched the Winter Session bill with the developer (raw HTML of the UMD winter page parsed; winter tuition confirmed linear, flat campus/distance fees confirmed for UG + grad). Wrote the Winter plan above. Later same day, settled with the developer: tuition stored one row per credit count; fee rule (any in-person class -> $116 only, online-only -> $55); winter credit cap on `academic_years` (nullable); winter gets its own `Selections` / `RatesBundle` shapes (discriminated union); AI chat winter support moved to its own late step; tasks reordered.
 
 ---
 
