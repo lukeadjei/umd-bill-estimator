@@ -1,5 +1,7 @@
 # Progress Log — UMD Bill Estimator
 
+> **ARCHIVED — closed v1 session history. Do not read at session start and do not append to it.** Current work is tracked in `docs/VERSION-HISTORY.md`. (References below to `docs/POLISH-CHECKLIST.md` are historical; that file has been deleted.)
+
 Dated, append-only record of what actually got done, one entry per work session. Separate from the Decisions & Ideas Log in `docs/umd-bill-estimator-getting-started-checklist.md` (that's *why* — this is *what, and when*). Newest entry on top.
 
 ---
