@@ -1,27 +1,8 @@
-import { isSemester } from "@/lib/calculator/constants";
 import { createAuthServerClient } from "./authServer";
 import { getRatesBundleForYear } from "./getRatesBundle";
-import { MAX_MISC_GRANTS } from "@/lib/calculator/constants";
-import type { MiscGrant, RatesBundle, Residency } from "@/lib/calculator/types";
+import type { RatesBundle } from "@/lib/calculator/types";
+import { buildSelectionsFromScenarioRow } from "./scenarioMapping";
 import type { DashboardSelections } from "@/components/dashboard/selections";
-
-// Defensive, not just a cast -- misc_grants is a jsonb column, so its shape is
-// only ever as trustworthy as whatever was last written to it. Malformed or
-// unexpected entries are dropped rather than crashing the dashboard load,
-// consistent with this file's existing "fail closed" philosophy elsewhere.
-function parseMiscGrants(raw: unknown): MiscGrant[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-    .map(
-      (entry): MiscGrant => ({
-        id: typeof entry.id === "string" ? entry.id : crypto.randomUUID(),
-        note: typeof entry.note === "string" ? entry.note : "",
-        amount: typeof entry.amount === "number" ? entry.amount : 0,
-      })
-    )
-    .slice(0, MAX_MISC_GRANTS);
-}
 
 export type SavedScenario = {
   id: string;
@@ -78,62 +59,6 @@ async function getOwnedScenarioRow(scenarioId: string, userId: string) {
 
   if (error || !data) return null;
   return data;
-}
-
-// Reverses what saveScenario's id-resolution did: turns stored row ids back
-// into the {roomType, buildingCategory} / {permitType, term} / plan-name
-// shapes the dashboard actually works with, by matching them against the
-// given RatesBundle. Shared by both resolveScenarioForEditing (always
-// passed the CURRENT bundle, since editing is only ever allowed for a
-// current-year scenario) and resolveScenarioForViewing (passed that
-// scenario's OWN year's bundle, whatever year that is) -- the resolution
-// logic itself doesn't care which one it's given, only the callers differ
-// in which bundle -- and therefore which scenarios -- they're allowed to use.
-function buildSelectionsFromScenarioRow(
-  scenario: NonNullable<Awaited<ReturnType<typeof getOwnedScenarioRow>>>,
-  rates: RatesBundle
-): DashboardSelections {
-  // Cast: residency is plain `string` at the DB layer (not a literal union),
-  // trusted here because it only ever came from values calculateTotal itself
-  // already validated against when the scenario was originally saved.
-  const residency = (scenario.tuition_rate_id
-    ? (rates.tuitionRates.find((r) => r.id === scenario.tuition_rate_id)?.residency ?? null)
-    : scenario.graduate_tuition_rate_id
-      ? (rates.graduateTuitionRates.find((r) => r.id === scenario.graduate_tuition_rate_id)?.residency ?? null)
-      : null) as Residency | null;
-  const educationLevel = scenario.tuition_rate_id ? "undergraduate" : scenario.graduate_tuition_rate_id ? "graduate" : null;
-
-  const housingRow = scenario.housing_rate_id ? rates.housingRates.find((r) => r.id === scenario.housing_rate_id) : null;
-  const residentPlanRow = scenario.resident_dining_plan_id
-    ? rates.residentDiningPlans.find((r) => r.id === scenario.resident_dining_plan_id)
-    : null;
-  const blockPlanRow = scenario.block_dining_plan_id
-    ? rates.blockDiningPlans.find((r) => r.id === scenario.block_dining_plan_id)
-    : null;
-  const parkingRow = scenario.parking_permit_id ? rates.parkingPermits.find((r) => r.id === scenario.parking_permit_id) : null;
-
-  return {
-    major: scenario.major ?? "",
-    semester: isSemester(scenario.semester) ? scenario.semester : "fall",
-    educationLevel,
-    residency,
-    creditHours: scenario.credit_hours,
-    appliesDifferentialTuition: scenario.applies_differential_tuition,
-    insurance: scenario.insurance_selected,
-    livingSituation: scenario.living_situation === "commuter" ? "commuter" : "on_campus",
-    housing: housingRow ? { roomType: housingRow.room_type, buildingCategory: housingRow.building_category } : null,
-    residentDiningPlan: residentPlanRow ? { planName: residentPlanRow.plan_name } : null,
-    blockDiningPlan: blockPlanRow ? { planLabel: blockPlanRow.plan_label } : null,
-    parking: parkingRow ? { permitType: parkingRow.permit_type, term: parkingRow.term } : null,
-    // Winter scenarios can't be saved yet (a later task adds the column); fall/spring have no winter fee choice.
-    winterClassFormat: null,
-    grants: {
-      pell: scenario.pell_grant_amount,
-      terrapinCommitment: scenario.terrapin_commitment_amount,
-      rawlingsEA: scenario.rawlings_ea_amount,
-      misc: parseMiscGrants(scenario.misc_grants),
-    },
-  };
 }
 
 export type ResolveForEditingResult =

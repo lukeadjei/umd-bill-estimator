@@ -4,6 +4,7 @@ import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import { createClient } from "@supabase/supabase-js";
 import { getServerUser } from "@/lib/supabase/authServer";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
+import { buildScenarioFields } from "@/lib/supabase/scenarioMapping";
 import { validateSelections } from "@/lib/calculator/validateSelections";
 import { calculateTotal } from "@/lib/calculator/calculateTotal";
 import {
@@ -29,7 +30,9 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
     return { success: false, error: "You must be signed in to save a scenario." };
   }
 
-  const validation = validateSelections(selections);
+  // Loaded before validating: some limits (winter's credit cap) come from the rates.
+  const rates = await getRatesBundle();
+  const validation = validateSelections(selections, rates);
   if (!validation.valid) {
     return { success: false, error: "This plan has errors and can't be saved yet." };
   }
@@ -85,49 +88,17 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
     }
   }
 
-  // Past this point, validateSelections guarantees educationLevel, residency,
-  // creditHours, and livingSituation are all non-null -- that's exactly what
-  // "always-required" means there. TypeScript can't see across the function
-  // call, so the non-null assertions below are asserting something already
-  // actually checked, not bypassing a real gap.
-  const rates = await getRatesBundle();
+  // Past this point, validateSelections guarantees the always-required fields
+  // are non-null for this semester, so the non-null assertions below assert
+  // something already checked, not a bypass of a real gap.
   const computedTotal = calculateTotal(selections, rates);
 
-  // Resolve every composite selection into its real row id by matching
-  // against the same RatesBundle calculateTotal itself just used -- never
-  // trust a client-supplied id, only the selection shape.
-  const tuitionRateId =
-    selections.educationLevel === "undergraduate"
-      ? (rates.tuitionRates.find((r) => r.residency === selections.residency)?.id ?? null)
-      : null;
-  const graduateTuitionRateId =
-    selections.educationLevel === "graduate"
-      ? (rates.graduateTuitionRates.find((r) => r.residency === selections.residency)?.id ?? null)
-      : null;
-
-  if (selections.educationLevel === "undergraduate" && !tuitionRateId) {
-    return { success: false, error: "Couldn't find a matching tuition rate. Try again." };
+  // Which rate-row ids and flags get stored depends on the semester (winter
+  // saves only winter's fields) -- see scenarioMapping.ts.
+  const scenarioFields = buildScenarioFields(selections, rates);
+  if (!scenarioFields.ok) {
+    return { success: false, error: scenarioFields.error };
   }
-  if (selections.educationLevel === "graduate" && !graduateTuitionRateId) {
-    return { success: false, error: "Couldn't find a matching graduate tuition rate. Try again." };
-  }
-
-  const housingRateId = selections.housing
-    ? (rates.housingRates.find(
-        (r) => r.room_type === selections.housing!.roomType && r.building_category === selections.housing!.buildingCategory
-      )?.id ?? null)
-    : null;
-  const residentDiningPlanId = selections.residentDiningPlan
-    ? (rates.residentDiningPlans.find((r) => r.plan_name === selections.residentDiningPlan!.planName)?.id ?? null)
-    : null;
-  const blockDiningPlanId = selections.blockDiningPlan
-    ? (rates.blockDiningPlans.find((r) => r.plan_label === selections.blockDiningPlan!.planLabel)?.id ?? null)
-    : null;
-  const parkingPermitId = selections.parking
-    ? (rates.parkingPermits.find(
-        (r) => r.permit_type === selections.parking!.permitType && r.term === selections.parking!.term
-      )?.id ?? null)
-    : null;
 
   // No new naming UI yet (deliberately deferred) -- auto-generate something
   // readable instead of asking the user for a name right now.
@@ -142,23 +113,14 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
       name,
       note: trimmedNote,
       academic_year_id: rates.academicYear.id,
-      major: selections.major.trim() || null,
       semester: selections.semester,
-      living_situation: selections.livingSituation!,
       credit_hours: selections.creditHours!,
-      applies_differential_tuition: selections.appliesDifferentialTuition,
-      insurance_selected: selections.insurance,
-      tuition_rate_id: tuitionRateId,
-      graduate_tuition_rate_id: graduateTuitionRateId,
-      housing_rate_id: housingRateId,
-      resident_dining_plan_id: residentDiningPlanId,
-      block_dining_plan_id: blockDiningPlanId,
-      parking_permit_id: parkingPermitId,
       computed_total: computedTotal,
       pell_grant_amount: selections.grants.pell,
       terrapin_commitment_amount: selections.grants.terrapinCommitment,
       rawlings_ea_amount: selections.grants.rawlingsEA,
       misc_grants: cleanedMiscGrants,
+      ...scenarioFields.fields,
     })
     .select("id")
     .single();

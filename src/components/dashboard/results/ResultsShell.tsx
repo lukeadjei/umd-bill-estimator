@@ -46,7 +46,7 @@ export function ResultsShell({ rates }: { rates: RatesBundle }) {
     );
   }
 
-  const validation = validateSelections(selections);
+  const validation = validateSelections(selections, rates);
 
   if (!validation.valid) {
     return (

@@ -275,32 +275,51 @@ export async function promoteWinterSession(academicYearId: string) {
     { name: "winter_graduate_tuition_rates", rows: graduate },
   ]);
 
-  const { error: deleteUndergradError } = await supabase
+  // Update in place (upsert on each table's natural unique key) instead of the
+  // delete-and-re-insert the other promote steps use: saved winter scenarios
+  // reference these rows by id, and a delete would be refused by the foreign
+  // key. An upsert keeps every existing row's id and only changes the price.
+  const undergradRows = undergrad.map((row) => ({ ...row, academic_year_id: academicYearId }));
+  const { error: upsertUndergradError } = await supabase
     .from("winter_tuition_rates")
-    .delete()
-    .eq("academic_year_id", academicYearId);
-  if (deleteUndergradError) throw deleteUndergradError;
-  const { error: insertUndergradError } = await supabase
-    .from("winter_tuition_rates")
-    .insert(undergrad.map((row) => ({ ...row, academic_year_id: academicYearId })));
-  if (insertUndergradError) throw insertUndergradError;
+    .upsert(undergradRows, { onConflict: "academic_year_id,residency,credit_hours" });
+  if (upsertUndergradError) throw upsertUndergradError;
 
-  const { error: deleteGraduateError } = await supabase
+  const graduateRows = graduate.map((row) => ({ ...row, academic_year_id: academicYearId }));
+  const { error: upsertGraduateError } = await supabase
     .from("winter_graduate_tuition_rates")
-    .delete()
-    .eq("academic_year_id", academicYearId);
-  if (deleteGraduateError) throw deleteGraduateError;
-  const { error: insertGraduateError } = await supabase
-    .from("winter_graduate_tuition_rates")
-    .insert(graduate.map((row) => ({ ...row, academic_year_id: academicYearId })));
-  if (insertGraduateError) throw insertGraduateError;
+    .upsert(graduateRows, { onConflict: "academic_year_id,residency,credit_hours" });
+  if (upsertGraduateError) throw upsertGraduateError;
 
-  const { error: deleteFeesError } = await supabase.from("winter_fees").delete().eq("academic_year_id", academicYearId);
-  if (deleteFeesError) throw deleteFeesError;
-  const { error: insertFeesError } = await supabase
+  const { error: upsertFeesError } = await supabase
     .from("winter_fees")
-    .insert(fees.map((row) => ({ ...row, academic_year_id: academicYearId })));
-  if (insertFeesError) throw insertFeesError;
+    .upsert({ ...fees[0], academic_year_id: academicYearId }, { onConflict: "academic_year_id" });
+  if (upsertFeesError) throw upsertFeesError;
+
+  // Remove live rows that are no longer in the staged chart (e.g. UMD drops a
+  // credit count). If a saved scenario still references one, the foreign key
+  // refuses the delete -- loud on purpose rather than silently orphaning it.
+  await deleteWinterRowsNotStaged("winter_tuition_rates", academicYearId, undergrad);
+  await deleteWinterRowsNotStaged("winter_graduate_tuition_rates", academicYearId, graduate);
+}
+
+async function deleteWinterRowsNotStaged(
+  table: "winter_tuition_rates" | "winter_graduate_tuition_rates",
+  academicYearId: string,
+  staged: { residency: string; credit_hours: number }[]
+) {
+  const { data: live, error: liveError } = await supabase
+    .from(table)
+    .select("id, residency, credit_hours")
+    .eq("academic_year_id", academicYearId);
+  if (liveError) throw liveError;
+
+  const stagedKeys = new Set(staged.map((row) => `${row.residency}:${row.credit_hours}`));
+  const staleIds = (live ?? []).filter((row) => !stagedKeys.has(`${row.residency}:${row.credit_hours}`)).map((row) => row.id);
+  if (staleIds.length === 0) return;
+
+  const { error } = await supabase.from(table).delete().in("id", staleIds);
+  if (error) throw error;
 }
 
 export async function promoteAllStaging(academicYearId: string) {

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { SEMESTERS, SEMESTER_LABELS } from "@/lib/calculator/constants";
+import { SELECTABLE_SEMESTERS, SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { Semester } from "@/lib/calculator/types";
 
 export function SemesterToggle({
@@ -11,7 +11,7 @@ export function SemesterToggle({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-1">
-      {SEMESTERS.map((semester) => (
+      {SELECTABLE_SEMESTERS.map((semester) => (
         <Button
           key={semester}
           type="button"
