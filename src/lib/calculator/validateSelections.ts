@@ -119,7 +119,8 @@ function validateRegularSemester(selections: Selections): ValidationError[] {
 function validateWinterSession(selections: Selections, rates: RatesBundle): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (rates.winter === null) {
+  // Falsy, not `=== null`: a stale cached bundle from before winter existed has no `winter` at all.
+  if (!rates.winter) {
     errors.push({ field: "semester", message: "Winter Session isn't available for this academic year." });
   }
   if (selections.creditHours !== null && !Number.isInteger(selections.creditHours)) {

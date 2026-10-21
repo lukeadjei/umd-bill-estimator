@@ -121,7 +121,7 @@ export type RatesBundle = {
   // Winter Session rates for this academic year, or null when the year has no
   // winter data configured (academic_years.winter_max_credit_hours is null, or
   // the winter tables are empty) -- e.g. right after a rollover, before winter
-  // rates are published. `rates.winter !== null` is how the app knows Winter is
+  // rates are published. a falsy `rates.winter` is how the app knows Winter is not
   // available at all. Its credit cap is academicYear.winter_max_credit_hours.
   winter: WinterRates | null;
 };

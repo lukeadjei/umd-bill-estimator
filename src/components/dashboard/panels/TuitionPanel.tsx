@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlertIcon } from "lucide-react";
+import { SparklesIcon, TriangleAlertIcon } from "lucide-react";
 import { OptionGroup } from "@/components/dashboard/OptionGroup";
 import { Button } from "@/components/ui/button";
 import { PanelTip } from "@/components/dashboard/PanelTip";
@@ -26,7 +26,7 @@ function markPosition(value: number) {
 // needed, `creditHours === null` already answers that directly.
 const NEUTRAL_CREDIT_HOURS_DISPLAY = 12;
 
-export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
+export function TuitionPanel({ selections, onChange, spacious, onOpenChat }: PanelProps) {
   const { major, educationLevel, residency, creditHours, appliesDifferentialTuition, insurance } = selections;
   const t = panelTextSizes(spacious);
   // Only nag when it'd actually change something useful: a major that's
@@ -48,6 +48,17 @@ export function TuitionPanel({ selections, onChange, spacious }: PanelProps) {
         <p className={`text-muted-foreground ${t.body}`}>
           Education level, residency, and credit hours drive the base tuition rate.
         </p>
+        {/* Phones only -- on desktop the assistant panel is already beside the form. */}
+        {onOpenChat && (
+          <button
+            type="button"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline md:hidden"
+            onClick={onOpenChat}
+          >
+            <SparklesIcon className="size-4" />
+            Not sure what to pick? Ask the assistant
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

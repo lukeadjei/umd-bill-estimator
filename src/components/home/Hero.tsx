@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -127,7 +128,9 @@ export function Hero() {
           each element invisible during its own delay instead of flashing
           in early. Respects prefers-reduced-motion globally (see
           globals.css). */}
-      <p className="animate-fade-in-up text-sm text-muted-foreground">
+      {/* px-10 on phones keeps this line clear of the theme toggle, which sits at the
+          top-right corner and used to overlap the end of its first line. */}
+      <p className="animate-fade-in-up px-10 text-sm text-muted-foreground md:px-0">
         Unofficial · Not affiliated with the University of Maryland
       </p>
 
@@ -200,6 +203,21 @@ export function Hero() {
               <span className="font-bold">3.</span> Save it — or just walk away, no account required
             </li>
           </ol>
+        </CardContent>
+      </Card>
+
+      {/* The AI assistant, called out on the front page -- v1 visitors didn't seem to
+          know it existed. Same Card treatment as the two above so the three read as a
+          set; the sparkle icon matches the assistant's button on the dashboard. */}
+      <Card
+        size="sm"
+        className="animate-fade-in-up max-w-xs bg-card/85 shadow-[-3px_4px_8px_-3px_rgba(0,0,0,0.18)] [animation-delay:350ms] md:-ml-4"
+      >
+        <CardContent className="flex items-start gap-2.5">
+          <SparklesIcon className="mt-0.5 size-5 shrink-0 text-primary" />
+          <p className="text-base leading-snug font-semibold text-foreground">
+            Or skip the forms: describe yourself in a sentence and our AI assistant fills out your plan for you.
+          </p>
         </CardContent>
       </Card>
 

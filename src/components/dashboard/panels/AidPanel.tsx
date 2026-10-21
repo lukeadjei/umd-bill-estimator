@@ -116,7 +116,7 @@ export function AidPanel({ selections, onChange, spacious }: PanelProps) {
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 rounded-full"
+            className="h-9 shrink-0 rounded-full lg:h-7"
             disabled={grants.misc.length >= MAX_MISC_GRANTS}
             onClick={addMiscGrant}
           >

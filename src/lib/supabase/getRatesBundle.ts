@@ -83,6 +83,12 @@ async function fetchRatesBundleForAcademicYear(academicYear: AcademicYearRow): P
   };
 }
 
+// Bump this whenever the RatesBundle SHAPE changes (a new table or field). Next's data cache
+// can outlive a deployment, so without it a freshly deployed app could keep serving a cached
+// bundle from before the change (e.g. one with no `winter` section) for up to 24 hours.
+// v2: added the winter section.
+const RATES_BUNDLE_CACHE_VERSION = "v2";
+
 // Plain, directly-testable data-access function -- no caching logic in here,
 // that's layered on below. Resolves "current" via academic_years.is_current
 // (see supabase/migrations/20260903183000_add_is_current_to_academic_years.sql)
@@ -135,7 +141,7 @@ async function fetchRatesBundleForYear(academicYearId: string): Promise<RatesBun
 // easy to call directly in a test without touching the cache.
 // 24h revalidate: rate data changes ~once/year (see docs/BUILD-REFERENCE.md),
 // so this is generous headroom, not a tight freshness requirement.
-export const getRatesBundle = unstable_cache(fetchCurrentRatesBundle, ["rates-bundle", "current"], {
+export const getRatesBundle = unstable_cache(fetchCurrentRatesBundle, ["rates-bundle", "current", RATES_BUNDLE_CACHE_VERSION], {
   tags: ["rates"],
   revalidate: 86400,
 });
@@ -149,7 +155,7 @@ export const getRatesBundle = unstable_cache(fetchCurrentRatesBundle, ["rates-bu
 // specific past year can be invalidated (revalidateTag(`rates-${id}`))
 // without busting every other year's cache or the live year's.
 export function getRatesBundleForYear(academicYearId: string): Promise<RatesBundle> {
-  return unstable_cache(() => fetchRatesBundleForYear(academicYearId), ["rates-bundle", academicYearId], {
+  return unstable_cache(() => fetchRatesBundleForYear(academicYearId), ["rates-bundle", academicYearId, RATES_BUNDLE_CACHE_VERSION], {
     tags: ["rates", `rates-${academicYearId}`],
     revalidate: 86400,
   })();

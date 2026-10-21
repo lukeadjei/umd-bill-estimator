@@ -3,16 +3,24 @@
 import { useEffect } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TAB_ITEMS, type TabId } from "@/components/dashboard/tabs";
+import type { TabId, TabItem } from "@/components/dashboard/tabs";
 
 // Flanks the active panel (parent must be `relative`) so users can move
 // between Major/Tuition/Housing/Parking/Meals without going back up to the
 // tab bar. Also wires ArrowLeft/ArrowRight globally -- see the effect below
 // for why "globally" needs a guard, not just a bare window listener.
-export function PanelNavArrows({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (tab: TabId) => void }) {
-  const currentIndex = TAB_ITEMS.findIndex((tab) => tab.id === activeTab);
-  const previousTab = currentIndex > 0 ? TAB_ITEMS[currentIndex - 1] : null;
-  const nextTab = currentIndex < TAB_ITEMS.length - 1 ? TAB_ITEMS[currentIndex + 1] : null;
+export function PanelNavArrows({
+  tabs,
+  activeTab,
+  onTabChange,
+}: {
+  tabs: TabItem[];
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
+}) {
+  const currentIndex = tabs.findIndex((tab) => tab.id === activeTab);
+  const previousTab = currentIndex > 0 ? tabs[currentIndex - 1] : null;
+  const nextTab = currentIndex < tabs.length - 1 ? tabs[currentIndex + 1] : null;
 
   // Global (window-level) so it works regardless of what's focused -- but
   // guarded: if focus is inside a text input/textarea/select (or a
@@ -52,7 +60,7 @@ export function PanelNavArrows({ activeTab, onTabChange }: { activeTab: TabId; o
         type="button"
         variant="outline"
         size="icon"
-        className="absolute top-10 left-2 z-10 rounded-full disabled:opacity-0"
+        className="absolute top-10 left-2 z-10 hidden rounded-full disabled:opacity-0 lg:inline-flex"
         onClick={() => previousTab && onTabChange(previousTab.id)}
         disabled={!previousTab}
         aria-label="Previous section"
@@ -63,7 +71,7 @@ export function PanelNavArrows({ activeTab, onTabChange }: { activeTab: TabId; o
         type="button"
         variant="outline"
         size="icon"
-        className="absolute top-10 right-2 z-10 rounded-full disabled:opacity-0"
+        className="absolute top-10 right-2 z-10 hidden rounded-full disabled:opacity-0 lg:inline-flex"
         onClick={() => nextTab && onTabChange(nextTab.id)}
         disabled={!nextTab}
         aria-label="Next section"

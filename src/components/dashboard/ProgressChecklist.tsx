@@ -1,13 +1,14 @@
 import { CheckIcon } from "lucide-react";
-import { TAB_ITEMS, type TabId } from "@/components/dashboard/tabs";
+import type { TabId, TabItem } from "@/components/dashboard/tabs";
 
 // "Visited" is a stand-in for "filled in" -- there's no real Selections
 // state to check completeness against yet, so this tracks which tabs the
 // user has clicked into at least once instead. Swap for real per-field
 // completion once each panel's state is lifted into an actual form.
-export function ProgressChecklist({ visited }: { visited: Set<TabId> }) {
-  const count = visited.size;
-  const total = TAB_ITEMS.length;
+export function ProgressChecklist({ tabs, visited }: { tabs: TabItem[]; visited: Set<TabId> }) {
+  // Only count tabs this semester actually has (visited can hold tabs from another semester).
+  const count = tabs.filter((tab) => visited.has(tab.id)).length;
+  const total = tabs.length;
 
   return (
     <div className="animate-fade-in-up rounded-none bg-card/85 p-4 ring-1 ring-foreground/10 shadow-[-5px_8px_16px_-3px_rgba(0,0,0,0.28)]">
@@ -26,7 +27,7 @@ export function ProgressChecklist({ visited }: { visited: Set<TabId> }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {TAB_ITEMS.map((tab) => {
+        {tabs.map((tab) => {
           const done = visited.has(tab.id);
           return (
             <span

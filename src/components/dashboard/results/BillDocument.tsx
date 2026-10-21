@@ -1,18 +1,9 @@
+import { Fragment } from "react";
 import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { DashboardSelections } from "@/components/dashboard/selections";
 import type { RatesBundle } from "@/lib/calculator/types";
-import {
-  calculateTuition,
-  calculateDifferentialTuition,
-  calculateFees,
-  calculateHousing,
-  calculateDining,
-  calculateParking,
-  calculateInsurance,
-  calculateAid,
-  calculateTotal,
-  calculateNetTotal,
-} from "@/lib/calculator/calculateTotal";
+import { calculateAid, calculateTotal, calculateNetTotal } from "@/lib/calculator/calculateTotal";
+import { breakdownLines, selectionSummaryRows } from "@/components/dashboard/billLines";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -27,14 +18,8 @@ function formatCurrency(value: number) {
 // year `selections` actually belongs to -- the caller's responsibility, not
 // this component's; it just prices whatever it's given.
 export function BillDocument({ selections, rates }: { selections: DashboardSelections; rates: RatesBundle }) {
-  const breakdownRows: { label: string; value: number }[] = [
-    { label: "Tuition", value: calculateTuition(selections, rates) + calculateDifferentialTuition(selections, rates) },
-    { label: "Fees", value: calculateFees(selections, rates) },
-    { label: "Housing", value: calculateHousing(selections, rates) },
-    { label: "Meals", value: calculateDining(selections, rates) },
-    { label: "Parking", value: calculateParking(selections, rates) },
-    { label: "Insurance", value: calculateInsurance(selections, rates) },
-  ];
+  // Same rows the dashboard's cost breakdown shows (billLines) -- the two can't drift apart.
+  const breakdownRows = breakdownLines(selections, rates).map((line) => ({ label: line.label, value: line.amount }));
   const total = calculateTotal(selections, rates);
   const aid = calculateAid(selections);
   const netTotal = calculateNetTotal(selections, rates);
@@ -70,50 +55,12 @@ export function BillDocument({ selections, rates }: { selections: DashboardSelec
       <section className="mb-8 break-inside-avoid">
         <h2 className="mb-2 text-lg font-semibold">Your selections</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-          {selections.major.trim() && (
-            <>
-              <dt className="text-black/60">Major</dt>
-              <dd>{selections.major}</dd>
-            </>
-          )}
-          <dt className="text-black/60">Education level</dt>
-          <dd className="capitalize">{selections.educationLevel}</dd>
-          <dt className="text-black/60">Residency</dt>
-          <dd>{selections.residency === "resident" ? "Maryland resident" : "Non-resident"}</dd>
-          <dt className="text-black/60">Credit hours</dt>
-          <dd>{selections.creditHours}</dd>
-          <dt className="text-black/60">Living situation</dt>
-          <dd>{selections.livingSituation === "commuter" ? "Commuter" : "On-campus"}</dd>
-          {selections.housing && (
-            <>
-              <dt className="text-black/60">Housing</dt>
-              <dd>
-                {selections.housing.roomType}, {selections.housing.buildingCategory}
-              </dd>
-            </>
-          )}
-          {selections.residentDiningPlan && (
-            <>
-              <dt className="text-black/60">Dining plan</dt>
-              <dd>{selections.residentDiningPlan.planName} (resident)</dd>
-            </>
-          )}
-          {selections.blockDiningPlan && (
-            <>
-              <dt className="text-black/60">Dining plan</dt>
-              <dd>{selections.blockDiningPlan.planLabel} (block)</dd>
-            </>
-          )}
-          {selections.parking && (
-            <>
-              <dt className="text-black/60">Parking permit</dt>
-              <dd>
-                {selections.parking.permitType}, {selections.parking.term}
-              </dd>
-            </>
-          )}
-          <dt className="text-black/60">Health insurance</dt>
-          <dd>{selections.insurance ? "Opted in" : "Not selected"}</dd>
+          {selectionSummaryRows(selections).map((row, index) => (
+            <Fragment key={`${row.label}-${index}`}>
+              <dt className="text-black/60">{row.label}</dt>
+              <dd>{row.value}</dd>
+            </Fragment>
+          ))}
         </dl>
       </section>
 
