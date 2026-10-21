@@ -1,4 +1,11 @@
-import type { RatesBundle, Selections } from "./types";
+import type { RatesBundle, Selections, Semester } from "./types";
+
+// Which price column holds each semester's figure -- a Record (not a ternary) so a new
+// semester fails to compile here instead of silently getting spring's price.
+const PRICE_COLUMN = { fall: "fall_price", spring: "spring_price" } as const satisfies Record<
+  Semester,
+  "fall_price" | "spring_price"
+>;
 
 // A missing match means the selection doesn't correspond to real rate data --
 // that's a bug (stale reference, mismatched dropdown), not a "missing
@@ -75,7 +82,7 @@ export function calculateFees(selections: Selections, rates: RatesBundle): numbe
 export function calculateInsurance(selections: Selections, rates: RatesBundle): number {
   if (!selections.insurance) return 0;
   const rate = findOrThrow(rates.healthInsuranceRates, () => true, "health insurance rate");
-  return selections.semester === "fall" ? rate.fall_price : rate.spring_price;
+  return rate[PRICE_COLUMN[selections.semester]];
 }
 
 // housing_rates.rate is the full ACADEMIC YEAR total -- half of it is one semester's share.
@@ -100,7 +107,7 @@ export function calculateDining(selections: Selections, rates: RatesBundle): num
       `resident dining plan (${planName})`
     );
     // Resident plans price fall/spring separately -- pick this semester's price, don't sum both.
-    return selections.semester === "fall" ? rate.fall_price : rate.spring_price;
+    return rate[PRICE_COLUMN[selections.semester]];
   }
 
   if (selections.blockDiningPlan) {

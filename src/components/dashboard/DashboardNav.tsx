@@ -1,3 +1,4 @@
+import type { Semester } from "@/lib/calculator/types";
 import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SemesterToggle } from "@/components/dashboard/SemesterToggle";
@@ -12,8 +13,6 @@ import {
 import { TAB_ITEMS, type TabId } from "@/components/dashboard/tabs";
 import { MessageCircleIcon } from "lucide-react";
 import { signOutAction } from "@/app/settings/actions";
-
-type Semester = "fall" | "spring";
 
 export function DashboardNav({
   activeTab,

@@ -1,3 +1,4 @@
+import { isSemester } from "@/lib/calculator/constants";
 import { createAuthServerClient } from "./authServer";
 import { getRatesBundleForYear } from "./getRatesBundle";
 import { MAX_MISC_GRANTS } from "@/lib/calculator/constants";
@@ -113,7 +114,7 @@ function buildSelectionsFromScenarioRow(
 
   return {
     major: scenario.major ?? "",
-    semester: scenario.semester === "spring" ? "spring" : "fall",
+    semester: isSemester(scenario.semester) ? scenario.semester : "fall",
     educationLevel,
     residency,
     creditHours: scenario.credit_hours,

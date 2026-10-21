@@ -1,5 +1,6 @@
 "use server";
 
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import { createClient } from "@supabase/supabase-js";
 import { getServerUser } from "@/lib/supabase/authServer";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
@@ -130,7 +131,7 @@ export async function saveScenario(selections: DashboardSelections, note?: strin
 
   // No new naming UI yet (deliberately deferred) -- auto-generate something
   // readable instead of asking the user for a name right now.
-  const name = `${rates.academicYear.label} ${selections.semester === "fall" ? "Fall" : "Spring"} Estimate`;
+  const name = `${rates.academicYear.label} ${SEMESTER_LABELS[selections.semester]} Estimate`;
 
   const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 

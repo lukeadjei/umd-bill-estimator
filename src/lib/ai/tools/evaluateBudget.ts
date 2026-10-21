@@ -2,6 +2,7 @@ import { calculateAid, calculateNetTotal, calculateTotal } from "@/lib/calculato
 import { validateSelections } from "@/lib/calculator/validateSelections";
 import { buildAiPatchToolSchema, mergeSelectionsPatch, verifyAiPatch } from "@/lib/calculator/verifyAiPatch";
 import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
+import type { Semester } from "@/lib/calculator/types";
 import type { AiTool } from "./types";
 
 const MAX_SCENARIOS = 3;
@@ -18,7 +19,7 @@ export type EvaluateBudgetScenario = {
   // required field or hits an illegal combination -- NOT a tool failure,
   // genuinely useful information ("you'd need to pick housing first").
   validationErrors: string[];
-  semester: "fall" | "spring";
+  semester: Semester;
   total: number | null;
   aid: number;
   netTotal: number | null;

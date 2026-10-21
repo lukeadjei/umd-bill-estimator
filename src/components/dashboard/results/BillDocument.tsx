@@ -1,3 +1,4 @@
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { DashboardSelections } from "@/components/dashboard/selections";
 import type { RatesBundle } from "@/lib/calculator/types";
 import {
@@ -62,7 +63,7 @@ export function BillDocument({ selections, rates }: { selections: DashboardSelec
         <h1 className="font-spicy-rice text-3xl">UMD Bill Estimator</h1>
         <p className="text-sm text-black/60">Unofficial estimate -- not affiliated with the University of Maryland</p>
         <p className="text-sm text-black/60">
-          {rates.academicYear.label} {selections.semester === "fall" ? "Fall" : "Spring"} — generated {generatedDate}
+          {rates.academicYear.label} {SEMESTER_LABELS[selections.semester]} — generated {generatedDate}
         </p>
       </header>
 

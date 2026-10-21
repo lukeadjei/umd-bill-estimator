@@ -1,4 +1,5 @@
 import type { Database } from "@/lib/supabase/database.types";
+import type { SEMESTERS } from "./constants";
 
 type Tables = Database["public"]["Tables"];
 
@@ -19,7 +20,7 @@ export type HealthInsuranceRateRow = Tables["health_insurance_rates"]["Row"];
 export type Residency = "resident" | "non_resident";
 export type EducationLevel = "undergraduate" | "graduate";
 // calculateTotal computes one semester's bill at a time, not a full-year total.
-export type Semester = "fall" | "spring";
+export type Semester = (typeof SEMESTERS)[number];
 // Explicit rather than inferred from housing being null -- null was ambiguous
 // between "commuter" and "hasn't answered yet." validateSelections' job to
 // enforce housing is null for commuters and non-null for on_campus.

@@ -1,4 +1,15 @@
-import type { Selections } from "./types";
+import type { Selections, Semester } from "./types";
+
+// The one list of semesters. `Semester` (types.ts) is derived from it, and every
+// per-semester lookup in the codebase is a Record<Semester, ...> so adding a value
+// here is a compile error everywhere that has to decide what to do with it.
+export const SEMESTERS = ["fall", "spring"] as const;
+
+export const SEMESTER_LABELS: Record<Semester, string> = { fall: "Fall", spring: "Spring" };
+
+export function isSemester(value: unknown): value is Semester {
+  return SEMESTERS.some((semester) => semester === value);
+}
 
 // Exact-match strings the validation rules key off of. Not a full mirror of the
 // rate tables -- just the handful of values that business logic (not just
