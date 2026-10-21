@@ -1,3 +1,4 @@
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import { CheckCircle2Icon, TriangleAlertIcon, XCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,7 +68,7 @@ function ScenarioCard({
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">{scenario.label}</span>
             <span className="w-fit rounded-full bg-muted px-2 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
-              {scenario.semester === "fall" ? "Fall" : "Spring"}
+              {SEMESTER_LABELS[scenario.semester]}
             </span>
           </div>
           {/* The dollar gap itself, not just the word "under"/"over" -- a

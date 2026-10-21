@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-
-type Semester = "fall" | "spring";
+import { SEMESTERS, SEMESTER_LABELS } from "@/lib/calculator/constants";
+import type { Semester } from "@/lib/calculator/types";
 
 export function SemesterToggle({
   value,
@@ -11,24 +11,18 @@ export function SemesterToggle({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-1">
-      <Button
-        type="button"
-        variant={value === "fall" ? "default" : "ghost"}
-        className="rounded-full text-base"
-        aria-pressed={value === "fall"}
-        onClick={() => onChange("fall")}
-      >
-        Fall
-      </Button>
-      <Button
-        type="button"
-        variant={value === "spring" ? "default" : "ghost"}
-        className="rounded-full text-base"
-        aria-pressed={value === "spring"}
-        onClick={() => onChange("spring")}
-      >
-        Spring
-      </Button>
+      {SEMESTERS.map((semester) => (
+        <Button
+          key={semester}
+          type="button"
+          variant={value === semester ? "default" : "ghost"}
+          className="rounded-full text-base"
+          aria-pressed={value === semester}
+          onClick={() => onChange(semester)}
+        >
+          {SEMESTER_LABELS[semester]}
+        </Button>
+      ))}
     </div>
   );
 }

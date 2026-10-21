@@ -1,6 +1,7 @@
-const CATEGORIES = ["Tuition", "Fees", "Housing", "Meals", "Parking", "Insurance"] as const;
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
+import type { Semester } from "@/lib/calculator/types";
 
-type Semester = "fall" | "spring";
+const CATEGORIES = ["Tuition", "Fees", "Housing", "Meals", "Parking", "Insurance"] as const;
 
 type CostBreakdownProps = {
   semester: Semester;
@@ -35,7 +36,7 @@ function formatCurrency(value: number) {
 export function CostBreakdown({ semester, values }: CostBreakdownProps) {
   return (
     <div className="animate-fade-in-up rounded-none bg-card/85 p-4 ring-1 ring-foreground/10 shadow-[-5px_8px_16px_-3px_rgba(0,0,0,0.28)]">
-      <p className="text-sm font-semibold text-foreground">{semester === "fall" ? "Fall" : "Spring"} breakdown</p>
+      <p className="text-sm font-semibold text-foreground">{SEMESTER_LABELS[semester]} breakdown</p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {CATEGORIES.map((category) => (
           <li key={category} className="flex items-center justify-between text-sm text-muted-foreground">

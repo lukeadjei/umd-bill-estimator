@@ -1,3 +1,4 @@
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
 
 // Turns a setSelections patch into short, human-readable field/value pairs
@@ -9,7 +10,7 @@ export function describeSelectionsPatch(patch: AiSelectionsPatch): { field: stri
   const entries: { field: string; value: string }[] = [];
 
   if (patch.semester !== undefined) {
-    entries.push({ field: "Semester", value: patch.semester === "fall" ? "Fall" : "Spring" });
+    entries.push({ field: "Semester", value: SEMESTER_LABELS[patch.semester] });
   }
   if (patch.educationLevel !== undefined) {
     entries.push({

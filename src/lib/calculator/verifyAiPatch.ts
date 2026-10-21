@@ -1,3 +1,4 @@
+import { SEMESTERS } from "./constants";
 import { MAX_CREDIT_HOURS, MIN_CREDIT_HOURS } from "./constants";
 import type { RatesBundle, Selections } from "./types";
 
@@ -38,7 +39,7 @@ export function mergeSelectionsPatch(base: Selections, patch: AiSelectionsPatch)
   return { ...base, ...patch };
 }
 
-const SEMESTER_VALUES = ["fall", "spring"] as const;
+const SEMESTER_VALUES = SEMESTERS;
 const EDUCATION_LEVEL_VALUES = ["undergraduate", "graduate"] as const;
 const RESIDENCY_VALUES = ["resident", "non_resident"] as const;
 const LIVING_SITUATION_VALUES = ["on_campus", "commuter"] as const;

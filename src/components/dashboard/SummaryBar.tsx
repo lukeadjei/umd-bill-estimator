@@ -1,5 +1,7 @@
 "use client";
 
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
+import type { Semester } from "@/lib/calculator/types";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,8 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { saveScenario } from "@/app/dashboard/actions";
 import type { DashboardSelections } from "@/components/dashboard/selections";
-
-type Semester = "fall" | "spring";
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "success" } | { status: "error"; message: string };
 
@@ -94,7 +94,7 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
       <div>
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
-            {semester === "fall" ? "Fall" : "Spring"} estimate
+            {SEMESTER_LABELS[semester]} estimate
             {aid > 0 && (showAfterAid ? " (after aid)" : " (before aid)")}
           </p>
           {aid > 0 && (
