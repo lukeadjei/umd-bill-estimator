@@ -6,6 +6,7 @@ import type {
   ParkingPermitsPageData,
   ResidentDiningPlansPageData,
   UndergraduateTuitionPageData,
+  WinterSessionPageData,
 } from "./types";
 
 const STAGING_TABLES = [
@@ -20,6 +21,9 @@ const STAGING_TABLES = [
   "resident_dining_plans_staging",
   "block_dining_plans_staging",
   "parking_permits_staging",
+  "winter_tuition_rates_staging",
+  "winter_graduate_tuition_rates_staging",
+  "winter_fees_staging",
 ] as const;
 
 // Re-running the scraper for the same year should leave one clean snapshot in
@@ -138,4 +142,31 @@ export async function writeParkingPermitsPageToStaging(data: ParkingPermitsPageD
     }))
   );
   if (error) throw error;
+}
+
+export async function writeWinterSessionPageToStaging(data: WinterSessionPageData, academicYearId: string) {
+  const toRows = (rates: WinterSessionPageData["undergraduateTuition"]) =>
+    rates.map((rate) => ({
+      academic_year_id: academicYearId,
+      residency: rate.residency,
+      credit_hours: rate.creditHours,
+      price: rate.price,
+    }));
+
+  const { error: undergradError } = await supabase
+    .from("winter_tuition_rates_staging")
+    .insert(toRows(data.undergraduateTuition));
+  if (undergradError) throw undergradError;
+
+  const { error: graduateError } = await supabase
+    .from("winter_graduate_tuition_rates_staging")
+    .insert(toRows(data.graduateTuition));
+  if (graduateError) throw graduateError;
+
+  const { error: feesError } = await supabase.from("winter_fees_staging").insert({
+    academic_year_id: academicYearId,
+    campus_services_rate: data.fees.campusServicesRate,
+    distance_learning_rate: data.fees.distanceLearningRate,
+  });
+  if (feesError) throw feesError;
 }

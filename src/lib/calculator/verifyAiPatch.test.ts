@@ -11,6 +11,7 @@ const rates: RatesBundle = {
     is_current: true,
     undergrad_tuition_full_time_credit_threshold: 12,
     full_time_fee_credit_threshold: 9,
+    winter_max_credit_hours: null,
   },
   tuitionRates: [
     { id: "t1", academic_year_id: "year-1", residency: "resident", full_time_rate: 10000, per_credit_rate: 400 },
@@ -34,6 +35,7 @@ const rates: RatesBundle = {
     { id: "p2", academic_year_id: "year-1", permit_type: "Resident", term: "annual", price: 900 },
   ],
   healthInsuranceRates: [{ id: "i1", academic_year_id: "year-1", fall_price: 1232, spring_price: 1707 }],
+  winter: null,
 };
 
 describe("verifyAiPatch -- scalar fields", () => {

@@ -23,6 +23,7 @@ const rates: RatesBundle = {
     is_current: true,
     undergrad_tuition_full_time_credit_threshold: 12,
     full_time_fee_credit_threshold: 9,
+    winter_max_credit_hours: null,
   },
   tuitionRates: [
     { id: "t1", academic_year_id: "year-1", residency: "resident", full_time_rate: 10000, per_credit_rate: 400 },
@@ -46,12 +47,14 @@ const rates: RatesBundle = {
   ],
   parkingPermits: [{ id: "p1", academic_year_id: "year-1", permit_type: "Commuter", term: "annual", price: 600 }],
   healthInsuranceRates: [{ id: "i1", academic_year_id: "year-1", fall_price: 1232, spring_price: 1707 }],
+  winter: null,
 };
 
 // A selections object with everything off/null, so each test only turns on what it's checking.
 // calculateTotal is one semester at a time -- fall is just the arbitrary default here.
 const baseSelections: Selections = {
   semester: "fall",
+  winterClassFormat: null,
   educationLevel: "undergraduate",
   residency: "resident",
   creditHours: 15,
@@ -230,6 +233,7 @@ describe("calculateTotal", () => {
   it("sums every category for a fully-loaded fall scenario", () => {
     const fullSelections: Selections = {
       semester: "fall",
+      winterClassFormat: null,
       educationLevel: "undergraduate",
       residency: "resident",
       creditHours: 15,
@@ -258,6 +262,7 @@ describe("calculateTotal", () => {
   it("gives a different total for spring when insurance/dining prices differ by semester", () => {
     const fallSelections: Selections = {
       semester: "fall",
+      winterClassFormat: null,
       educationLevel: "undergraduate",
       residency: "resident",
       creditHours: 15,
@@ -283,6 +288,7 @@ describe("calculateTotal", () => {
   it("is exactly $0 for a brand-new visitor who hasn't answered anything yet", () => {
     const untouched: Selections = {
       semester: "fall",
+      winterClassFormat: null,
       educationLevel: null,
       residency: null,
       creditHours: null,

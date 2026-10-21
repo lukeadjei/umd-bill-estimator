@@ -55,8 +55,9 @@ Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, b
 **Column-level detail lives in `src/lib/supabase/database.types.ts` and `supabase/migrations/` — read those, don't rely on a copy here (verified against the live project at session start).** What the files don't make obvious:
 
 - Every rate table (`tuition_rates`, `mandatory_fees`, `differential_tuition`, `housing_rates`, `resident_dining_plans`, `block_dining_plans`, `parking_permits`, `graduate_tuition_rates`, `graduate_fees`, `health_insurance_rates`) has an `academic_year_id` FK to `academic_years`, which is how a new year's rates become a data insert instead of a code change.
-- `academic_years` also holds `is_current` (only one row can be) and the credit-hour thresholds for full-time fees/tuition — these live in the DB, not in code.
-- Each of those 11 tables has a `_staging` twin; scrapes only write there. `scenarios` stores a user's saved plan; `ai_parse_logs` / `ai_rate_limits` back the AI chat.
+- `academic_years` also holds `is_current` (only one row can be), the credit-hour thresholds for full-time fees/tuition (these live in the DB, not in code), and `winter_max_credit_hours` (hand-set, nullable, never scraped/staged — null means no winter that year).
+- Winter Session rates live in `winter_tuition_rates`, `winter_graduate_tuition_rates` (one row per residency × credit count = published total price, never multiplied) and `winter_fees`, each with a `_staging` twin.
+- Each of those rate tables has a `_staging` twin; scrapes only write there. `scenarios` stores a user's saved plan; `ai_parse_logs` / `ai_rate_limits` back the AI chat.
 - `housing_rates.rate` is the full academic-year total, not per semester. Graduate tuition has no flat full-time rate. Health insurance rates are shared by undergrad and grad; only the eligibility threshold differs (below).
 - `scenarios` stores exactly one of `tuition_rate_id` / `graduate_tuition_rate_id`, and its writes go through the service-role client (see Architecture map).
 
@@ -68,6 +69,8 @@ Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, b
 ## Code organization conventions
 
 - Before creating a new folder anywhere in the codebase, check whether a folder with that name (or a near-duplicate purpose) already exists elsewhere in the tree — don't create a second `panels/`, `actions.ts`, etc. in a different location when an existing one already serves that role, and don't give two different folders overlapping names/purposes. Keep new files/folders organized consistently with the existing structure rather than bolting on a parallel convention.
+
+- Build features so they can scale — the developer wants to be able to build on top of them (new seasons, new categories, new rate tables) without reworking them. Prefer data-driven structures and exhaustive lookups (`Record<Semester, …>`, per-semester config, rows in a table) over scattered `if (x === "fall")` branches, and put an extension point wherever a second case is plausible. Don't build unused abstractions for cases that aren't plausible; the goal is that the next case is an addition, not a refactor.
 
 - Every UI feature must be designed for mobile as well as desktop — when adding or changing something for one, make sure it fits the other (check at a ~375px viewport) rather than treating mobile as an afterthought. Use responsive CSS breakpoints, not device detection.
 

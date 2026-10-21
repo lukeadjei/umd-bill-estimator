@@ -10,7 +10,12 @@
     "strict": true,
     "noEmit": false,
     "outDir": "dist/lambda",
-    "rootDir": "."
+    "rootDir": ".",
+    // The scraper imports a few constants from src/lib/calculator, which in turn
+    // reference types via the app's "@/" alias (type-only, erased at runtime) --
+    // the compiler still has to be able to resolve them.
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
   },
   "include": ["scraper/lambdaHandler.ts"]
 }

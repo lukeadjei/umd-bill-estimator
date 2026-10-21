@@ -27,6 +27,7 @@ export const DEFAULT_SELECTIONS: DashboardSelections = {
   residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
+  winterClassFormat: null,
   grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 

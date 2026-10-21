@@ -46,6 +46,7 @@ export const EMPTY_SELECTIONS: Selections = {
   residentDiningPlan: null,
   blockDiningPlan: null,
   parking: null,
+  winterClassFormat: null,
   grants: { pell: 0, terrapinCommitment: 0, rawlingsEA: 0, misc: [] },
 };
 

@@ -100,3 +100,22 @@ export type ScrapedParkingPermit = {
 export type ParkingPermitsPageData = {
   permits: ScrapedParkingPermit[];
 };
+
+// Link group 7: Winter Session tuition + flat fees (UMD Extended Studies).
+// Tuition is the published TOTAL for creditHours credits, not a per-credit rate.
+export type ScrapedWinterTuitionRate = {
+  residency: "resident" | "non_resident";
+  creditHours: number;
+  price: number;
+};
+
+export type ScrapedWinterFees = {
+  campusServicesRate: number;
+  distanceLearningRate: number;
+};
+
+export type WinterSessionPageData = {
+  undergraduateTuition: ScrapedWinterTuitionRate[];
+  graduateTuition: ScrapedWinterTuitionRate[];
+  fees: ScrapedWinterFees;
+};

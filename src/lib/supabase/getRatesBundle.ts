@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createServerSupabaseClient } from "./server";
 import type { AcademicYearRow, RatesBundle } from "@/lib/calculator/types";
+import { buildWinterRates } from "./buildWinterRates";
 
 // Shared by both the "current year" and "specific year" fetch paths below --
 // takes an already-resolved academic_years row (rather than re-resolving
@@ -20,6 +21,9 @@ async function fetchRatesBundleForAcademicYear(academicYear: AcademicYearRow): P
     blockDiningPlans,
     parkingPermits,
     healthInsuranceRates,
+    winterTuitionRates,
+    winterGraduateTuitionRates,
+    winterFees,
   ] = await Promise.all([
     supabase.from("tuition_rates").select("*").eq("academic_year_id", academicYearId),
     supabase.from("graduate_tuition_rates").select("*").eq("academic_year_id", academicYearId),
@@ -31,6 +35,9 @@ async function fetchRatesBundleForAcademicYear(academicYear: AcademicYearRow): P
     supabase.from("block_dining_plans").select("*").eq("academic_year_id", academicYearId),
     supabase.from("parking_permits").select("*").eq("academic_year_id", academicYearId),
     supabase.from("health_insurance_rates").select("*").eq("academic_year_id", academicYearId),
+    supabase.from("winter_tuition_rates").select("*").eq("academic_year_id", academicYearId),
+    supabase.from("winter_graduate_tuition_rates").select("*").eq("academic_year_id", academicYearId),
+    supabase.from("winter_fees").select("*").eq("academic_year_id", academicYearId),
   ]);
 
   const results = {
@@ -44,6 +51,9 @@ async function fetchRatesBundleForAcademicYear(academicYear: AcademicYearRow): P
     blockDiningPlans,
     parkingPermits,
     healthInsuranceRates,
+    winterTuitionRates,
+    winterGraduateTuitionRates,
+    winterFees,
   };
 
   for (const [name, result] of Object.entries(results)) {
@@ -64,6 +74,12 @@ async function fetchRatesBundleForAcademicYear(academicYear: AcademicYearRow): P
     blockDiningPlans: blockDiningPlans.data ?? [],
     parkingPermits: parkingPermits.data ?? [],
     healthInsuranceRates: healthInsuranceRates.data ?? [],
+    winter: buildWinterRates(
+      academicYear,
+      winterTuitionRates.data ?? [],
+      winterGraduateTuitionRates.data ?? [],
+      winterFees.data ?? []
+    ),
   };
 }
 

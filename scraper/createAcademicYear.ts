@@ -25,7 +25,7 @@ async function main() {
 
   const { data: currentYear, error: currentYearError } = await supabase
     .from("academic_years")
-    .select("undergrad_tuition_full_time_credit_threshold, full_time_fee_credit_threshold")
+    .select("undergrad_tuition_full_time_credit_threshold, full_time_fee_credit_threshold, winter_max_credit_hours")
     .eq("is_current", true)
     .maybeSingle();
   if (currentYearError) throw currentYearError;
@@ -37,6 +37,9 @@ async function main() {
       is_current: false,
       undergrad_tuition_full_time_credit_threshold: currentYear?.undergrad_tuition_full_time_credit_threshold ?? 12,
       full_time_fee_credit_threshold: currentYear?.full_time_fee_credit_threshold ?? 9,
+      // Hand-set policy number (never scraped/staged) -- carried forward like the
+      // thresholds above. Null stays null: winter isn't configured for that year.
+      winter_max_credit_hours: currentYear?.winter_max_credit_hours ?? null,
     })
     .select("id")
     .single();

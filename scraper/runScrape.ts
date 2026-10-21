@@ -4,6 +4,7 @@ import { fetchHousingRatesPage } from "./fetchHousingRatesPage";
 import { fetchParkingPermitsPage } from "./fetchParkingPermitsPage";
 import { fetchResidentDiningPlansPage } from "./fetchResidentDiningPlansPage";
 import { fetchUndergraduateTuitionPage } from "./fetchUndergraduateTuitionPage";
+import { fetchWinterSessionPage } from "./fetchWinterSessionPage";
 import {
   clearStagingForAcademicYear,
   writeBlockDiningPlansPageToStaging,
@@ -12,6 +13,7 @@ import {
   writeParkingPermitsPageToStaging,
   writeResidentDiningPlansPageToStaging,
   writeUndergraduateTuitionPageToStaging,
+  writeWinterSessionPageToStaging,
 } from "./writeToStaging";
 
 // The actual scrape-everything-into-staging logic, extracted out of the CLI
@@ -53,6 +55,11 @@ export async function runScrape(academicYearId: string): Promise<void> {
   console.log("Scraping parking permits (link group 6)...");
   const parking = await fetchParkingPermitsPage();
   await writeParkingPermitsPageToStaging(parking, academicYearId);
+  console.log("  staged.");
+
+  console.log("Scraping winter session tuition + fees (link group 7)...");
+  const winter = await fetchWinterSessionPage();
+  await writeWinterSessionPageToStaging(winter, academicYearId);
   console.log("  staged.");
 
   console.log("\nAll done. Review the staged data in Supabase Studio before promoting anything to the live tables.");
