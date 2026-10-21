@@ -1,4 +1,7 @@
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
+import { availableSemesters } from "@/lib/calculator/semesterConfig";
 import type { RatesBundle, Selections } from "@/lib/calculator/types";
+import { validateSelections } from "@/lib/calculator/validateSelections";
 
 // A short, human-readable summary of what's already known, appended to the
 // system prompt per-request (see route.ts) so the model doesn't ask for
@@ -21,6 +24,9 @@ export function describeKnownSelections(selections: Selections): string {
   if (selections.parking) parts.push(`parking: ${selections.parking.permitType}, ${selections.parking.term}`);
   if (selections.appliesDifferentialTuition) parts.push("differential tuition applies");
   if (selections.insurance) parts.push("health insurance selected");
+  if (selections.winterClassFormat) {
+    parts.push(selections.winterClassFormat === "in_person" ? "Winter class format: at least one class in person" : "Winter class format: all classes online");
+  }
   if (selections.grants.pell > 0 || selections.grants.terrapinCommitment > 0 || selections.grants.rawlingsEA > 0 || selections.grants.misc.length > 0) {
     parts.push("has financial aid entered");
   }
@@ -59,4 +65,20 @@ export function describeCheapestDefaults(rates: RatesBundle): string {
   if (parts.length === 0) return "";
 
   return `If -- and ONLY if -- the student has explicitly asked for a full/complete plan and hasn't specified housing or a dining plan themselves, the most affordable valid defaults available this year are: ${parts.join(", ")}. Use these directly in setSelections so the plan is actually complete, rather than pausing to ask. Never use these as defaults for a narrower question the student didn't ask you to fill in for them.`;
+}
+
+// Exactly what is still missing for a real total, taken from the same validateSelections the dashboard
+// uses -- so it is correct for the current semester (Winter needs a class format, Fall/Spring need a
+// living situation) without the prompt hardcoding either list. Appended per request so the model asks
+// for those specific things BEFORE running a cost tool, and never asks for something already known.
+// Credit hours are listed like any other missing field here, but a "most credits under a budget"
+// question doesn't need them (findMaxCredits solves for them) -- the system prompt says so.
+export function describeMissingFields(selections: Selections, rates: RatesBundle): string {
+  const semesters = availableSemesters(rates).map((semester) => SEMESTER_LABELS[semester]).join(", ");
+  const { errors } = validateSelections(selections, rates);
+  const status =
+    errors.length === 0
+      ? "Nothing required is missing -- the student's current plan is complete enough for a real total."
+      : `Still needed before the student's current ${SEMESTER_LABELS[selections.semester]} plan has a real total: ${errors.map((error) => error.message).join(" ")}`;
+  return `${status} Semesters offered this year: ${semesters}.`;
 }

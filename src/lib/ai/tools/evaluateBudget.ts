@@ -3,6 +3,7 @@ import { validateSelections } from "@/lib/calculator/validateSelections";
 import { buildAiPatchToolSchema, mergeSelectionsPatch, verifyAiPatch } from "@/lib/calculator/verifyAiPatch";
 import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
 import type { Semester } from "@/lib/calculator/types";
+import { checkScenarioPatch } from "./patchGuards";
 import type { AiTool } from "./types";
 
 const MAX_SCENARIOS = 3;
@@ -124,6 +125,13 @@ export const evaluateBudgetTool: AiTool = {
       }
 
       const merged = mergeSelectionsPatch(context.currentSelections, verifyResult.patch);
+      // A scenario that names fields its semester ignores (e.g. housing in Winter) is a mistake to
+      // correct, not a result to price -- the number would silently ignore part of what was asked.
+      const misuse = checkScenarioPatch(verifyResult.patch, merged.semester);
+      if (misuse.length > 0) {
+        fatalErrors.push(`Scenario "${label}": ${misuse.join(" ")}`);
+        continue;
+      }
       const validation = validateSelections(merged, context.rates);
 
       if (!validation.valid) {

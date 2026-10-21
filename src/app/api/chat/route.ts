@@ -2,18 +2,21 @@ import { NextResponse } from "next/server";
 import { resolveCallerIdentity } from "@/lib/ai/callerIdentity";
 import { trimChatHistory, validateChatMessage } from "@/lib/ai/chatInput";
 import type { ChatMessage } from "@/lib/ai/chatInput";
-import { describeCheapestDefaults, describeKnownSelections } from "@/lib/ai/describeSelections";
+import { describeCheapestDefaults, describeKnownSelections, describeMissingFields } from "@/lib/ai/describeSelections";
 import { getAiProvider, AI_PROVIDER_NAME } from "@/lib/ai/getProvider";
 import { logAiParse } from "@/lib/ai/logging";
 import { checkRateLimit } from "@/lib/ai/rateLimit";
 import { SYSTEM_PROMPT } from "@/lib/ai/systemPrompt";
 import { AI_TOOLS, findAiTool } from "@/lib/ai/tools";
-import type { EvaluateBudgetResult } from "@/lib/ai/tools";
+import type { EvaluateBudgetResult, FindMaxCreditsResult } from "@/lib/ai/tools";
 import { extractDollarAmounts, replyDollarAmountsAreVerified, stripLinksAndImages } from "@/lib/ai/verifyReplyText";
 import { EMPTY_SELECTIONS } from "@/lib/calculator/constants";
 import { getRatesBundle } from "@/lib/supabase/getRatesBundle";
 import type { Json } from "@/lib/supabase/database.types";
-import type { Selections } from "@/lib/calculator/types";
+import { validateSelections } from "@/lib/calculator/validateSelections";
+import { mergeSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
+import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
+import type { RatesBundle, Selections } from "@/lib/calculator/types";
 
 type ChatRequestBody = { message?: unknown; history?: unknown; selections?: unknown };
 type ChatToolResult = { name: string; result: unknown };
@@ -47,6 +50,14 @@ function parseCurrentSelections(raw: unknown): Selections {
 // amounts; every other tool contributes an empty list, meaning their replies
 // may not contain a dollar figure at all.
 function extractVerifiedDollarAmounts(toolName: string | null, result: unknown): number[] {
+  if (toolName === "findMaxCredits") {
+    const maxResult = result as FindMaxCreditsResult;
+    const amounts = [maxResult.targetBudget];
+    for (const outcome of [maxResult.atMax, maxResult.firstOver, maxResult.cheapest]) {
+      if (outcome) amounts.push(outcome.total, outcome.netTotal);
+    }
+    return amounts;
+  }
   if (toolName !== "evaluateBudget") return [];
   const budgetResult = result as EvaluateBudgetResult;
   const amounts: number[] = [];
@@ -56,6 +67,13 @@ function extractVerifiedDollarAmounts(toolName: string | null, result: unknown):
     if (scenario.netTotal !== null) amounts.push(scenario.netTotal);
   }
   return amounts;
+}
+
+// A dollar string for the deterministic fallback replies: whole dollars stay whole, anything else shows
+// cents ("$11,878.50", never "$11,878.5"). Matches the DOLLAR_AMOUNT_PATTERN verifyReplyText checks for.
+function formatMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "$0";
+  return `$${value.toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 })}`;
 }
 
 // A safe, deterministic sentence built directly from real tool output --
@@ -72,20 +90,64 @@ function buildFallbackReply(toolName: string | null, result: unknown): string {
         budgetResult.targetBudget === null
           ? ""
           : underBudget
-            ? ` (under your $${budgetResult.targetBudget.toLocaleString()} budget)`
-            : ` (over your $${budgetResult.targetBudget.toLocaleString()} budget)`;
+            ? ` (under your ${formatMoney(budgetResult.targetBudget)} budget)`
+            : ` (over your ${formatMoney(budgetResult.targetBudget)} budget)`;
 
       // Explain both figures when aid applies -- matching the "before this,
       // after that" behavior explicitly requested (2026-09-16) -- not just
       // the gross total silently ignoring aid the student already entered.
       if (scenario.aid > 0) {
-        return `${scenario.label}: $${scenario.total?.toLocaleString()} before aid${budgetNote(scenario.underBudgetGross)}, $${scenario.netTotal?.toLocaleString()} after aid${budgetNote(scenario.underBudgetNet)}`;
+        return `${scenario.label}: ${formatMoney(scenario.total)} before aid${budgetNote(scenario.underBudgetGross)}, ${formatMoney(scenario.netTotal)} after aid${budgetNote(scenario.underBudgetNet)}`;
       }
-      return `${scenario.label}: $${scenario.total?.toLocaleString()}${budgetNote(scenario.underBudgetGross)}`;
+      return `${scenario.label}: ${formatMoney(scenario.total)}${budgetNote(scenario.underBudgetGross)}`;
     });
     return parts.join(" · ");
   }
+  if (toolName === "findMaxCredits") {
+    const maxResult = result as FindMaxCreditsResult;
+    const budget = formatMoney(maxResult.targetBudget);
+    if (maxResult.status === "needs_info") {
+      return `To work that out I still need a few details: ${maxResult.validationErrors.join(" ")}`;
+    }
+    if (maxResult.status === "none_fit" && maxResult.cheapest) {
+      const { creditHours, netTotal } = maxResult.cheapest;
+      return `Even ${creditHours} credit hour${creditHours === 1 ? "" : "s"} comes to ${formatMoney(netTotal)}, which is over your ${budget} budget.`;
+    }
+    if (maxResult.atMax) {
+      const parts = [
+        `Up to ${maxResult.atMax.creditHours} credit hours keeps your estimated total at ${formatMoney(maxResult.atMax.netTotal)}, within your ${budget} budget.`,
+      ];
+      if (maxResult.firstOver) {
+        parts.push(`${maxResult.firstOver.creditHours} credits would be ${formatMoney(maxResult.firstOver.netTotal)}.`);
+      }
+      if (maxResult.sameCostFrom !== null && maxResult.sameCostFrom < maxResult.atMax.creditHours) {
+        parts.push(`Anything from ${maxResult.sameCostFrom} to ${maxResult.atMax.creditHours} credits costs the same.`);
+      }
+      return parts.join(" ");
+    }
+  }
   return "I can only state a dollar amount when it comes from a real cost check -- want me to check your plan against a budget?";
+}
+
+// For a turn where a tool ran successfully but the model wrote nothing afterwards. The cost tools
+// already hold real numbers, so reuse the deterministic reply; the others get a short pointer instead
+// of a bare "Done." (a dollar amount is never invented here).
+function buildEmptyReplyFallback(
+  toolName: string,
+  result: unknown,
+  currentSelections: Selections,
+  rates: RatesBundle
+): string {
+  if (toolName === "evaluateBudget" || toolName === "findMaxCredits") return buildFallbackReply(toolName, result);
+  if (toolName === "setSelections") {
+    // Only point at the total if it is actually showing: the summary bar hides it while anything required
+    // is still missing, so check the plan as it will be AFTER this patch.
+    const { errors } = validateSelections(mergeSelectionsPatch(currentSelections, result as AiSelectionsPatch), rates);
+    return errors.length === 0
+      ? "I've updated your plan -- your estimated total is in the summary bar at the bottom of the page."
+      : `I've updated your plan. To see a total I still need: ${errors.map((error) => error.message).join(" ")}`;
+  }
+  return "Done.";
 }
 
 // The only Route Handler in this app -- everything else reads via Server
@@ -150,7 +212,7 @@ export async function POST(request: Request) {
   // things by clicking dashboard panels directly, with nothing about it in
   // this chat's own history). Reused for BOTH calls below so the model's
   // view of "what's already known" stays consistent within one exchange.
-  const systemPrompt = `${SYSTEM_PROMPT}\n\n${describeKnownSelections(currentSelections)}\n\n${describeCheapestDefaults(rates)}`;
+  const systemPrompt = `${SYSTEM_PROMPT}\n\n${describeKnownSelections(currentSelections)}\n\n${describeMissingFields(currentSelections, rates)}\n\n${describeCheapestDefaults(rates)}`;
 
   try {
     const firstTurn = await provider.generate({ systemPrompt, history, message, tools });
@@ -195,7 +257,9 @@ export async function POST(request: Request) {
             toolCall: requestedCall,
             toolResult: executeResult.result,
           });
-          replyText = secondTurn.text ?? "Done.";
+          // The model sometimes returns no text after a tool runs. Don't show a bare "Done." -- build the
+          // sentence from the tool's own real numbers instead.
+          replyText = secondTurn.text?.trim() ? secondTurn.text : buildEmptyReplyFallback(tool.name, executeResult.result, currentSelections, rates);
           toolResultForClient = { name: tool.name, result: executeResult.result };
         }
       }

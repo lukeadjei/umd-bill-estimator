@@ -112,3 +112,19 @@ const SUMMARY_BUILDERS: Record<Semester, (selections: DashboardSelections) => Su
 export function selectionSummaryRows(selections: DashboardSelections): SummaryRow[] {
   return SUMMARY_BUILDERS[selections.semester](selections);
 }
+
+// ---------------------------------------------------------------- bill footnote
+
+// An extra, semester-specific sentence for the printed bill's accuracy note (null = nothing beyond
+// the general disclaimer). Winter is billed differently from a semester and UMD publishes that some
+// courses carry their own charges, so the printout says what the estimate leaves out.
+const BILL_NOTES: Record<Semester, string | null> = {
+  fall: null,
+  spring: null,
+  winter:
+    "Winter Session estimates cover per-credit tuition and the one flat Winter fee only. Some courses add lab, studio or materials fees (shown on Testudo), and some programs set their own Winter rates -- confirm your specific sections with UMD.",
+};
+
+export function billNote(semester: Semester): string | null {
+  return BILL_NOTES[semester];
+}

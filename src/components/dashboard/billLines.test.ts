@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateTotal } from "@/lib/calculator/calculateTotal";
 import { availableSemesters, sameSemesterKind } from "@/lib/calculator/semesterConfig";
 import type { RatesBundle } from "@/lib/calculator/types";
-import { breakdownLines, selectionSummaryRows } from "./billLines";
+import { billNote, breakdownLines, selectionSummaryRows } from "./billLines";
 import { DEFAULT_SELECTIONS, hasProgressToLose, resetForSemesterChange, type DashboardSelections } from "./selections";
 import { getTabItems } from "./tabs";
 
@@ -98,6 +98,14 @@ describe("selectionSummaryRows", () => {
     expect(selectionSummaryRows({ ...winter, winterClassFormat: "online_only" })[3].value).toBe(
       "All classes online (distance learning fee)"
     );
+  });
+});
+
+describe("billNote", () => {
+  it("adds a winter-specific note and nothing extra for fall/spring", () => {
+    expect(billNote("fall")).toBeNull();
+    expect(billNote("spring")).toBeNull();
+    expect(billNote("winter")).toMatch(/lab, studio or materials fees/);
   });
 });
 

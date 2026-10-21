@@ -56,6 +56,12 @@ export function describeSelectionsPatch(patch: AiSelectionsPatch): { field: stri
   if (patch.parking) {
     entries.push({ field: "Parking", value: `${patch.parking.permitType} (${patch.parking.term})` });
   }
+  if (patch.winterClassFormat) {
+    entries.push({
+      field: "Class Format",
+      value: patch.winterClassFormat === "in_person" ? "At least one in person" : "All online",
+    });
+  }
 
   return entries;
 }

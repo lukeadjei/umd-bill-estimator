@@ -3,7 +3,7 @@ import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { DashboardSelections } from "@/components/dashboard/selections";
 import type { RatesBundle } from "@/lib/calculator/types";
 import { calculateAid, calculateTotal, calculateNetTotal } from "@/lib/calculator/calculateTotal";
-import { breakdownLines, selectionSummaryRows } from "@/components/dashboard/billLines";
+import { billNote, breakdownLines, selectionSummaryRows } from "@/components/dashboard/billLines";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -113,6 +113,7 @@ export function BillDocument({ selections, rates }: { selections: DashboardSelec
       <p className="mt-8 border-t border-black/20 pt-4 text-xs text-black/50">
         This is an estimate based on published UMD rates and the selections above -- actual charges from the
         University of Maryland may differ. Always confirm your official bill through UMD&apos;s own billing systems.
+        {billNote(selections.semester) && <> {billNote(selections.semester)}</>}
       </p>
     </div>
   );
