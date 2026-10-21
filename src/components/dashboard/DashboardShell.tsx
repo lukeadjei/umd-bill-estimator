@@ -7,16 +7,33 @@ import { Button } from "@/components/ui/button";
 import { ScatteredIllustrations, type ScatterItem } from "@/components/ScatteredIllustrations";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { ChatPanel } from "@/components/dashboard/ChatPanel";
-import { ChatFab } from "@/components/dashboard/ChatFab";
+import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { PanelStepButtons } from "@/components/dashboard/PanelStepButtons";
+import { AssistantIntroCard } from "@/components/dashboard/AssistantIntroCard";
+import { markAssistantSeen, readAssistantSeen } from "@/components/dashboard/assistantIntro";
 import { ChatOverlay } from "@/components/dashboard/ChatOverlay";
 import { SummaryBar } from "@/components/dashboard/SummaryBar";
 import { ProgressChecklist } from "@/components/dashboard/ProgressChecklist";
 import { CostBreakdown } from "@/components/dashboard/CostBreakdown";
 import { PanelNavArrows } from "@/components/dashboard/PanelNavArrows";
-import type { TabId } from "@/components/dashboard/tabs";
+import { getTabItems, type TabId } from "@/components/dashboard/tabs";
+import { SemesterToggle } from "@/components/dashboard/SemesterToggle";
+import { breakdownLines } from "@/components/dashboard/billLines";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DEFAULT_SELECTIONS,
+  hasProgressToLose,
   readStoredSelections,
+  resetForSemesterChange,
   writeStoredSelections,
   type DashboardSelections,
   type PanelProps,
@@ -27,29 +44,32 @@ import { HousingPanel } from "@/components/dashboard/panels/HousingPanel";
 import { ParkingPanel } from "@/components/dashboard/panels/ParkingPanel";
 import { MealsPanel } from "@/components/dashboard/panels/MealsPanel";
 import { AidPanel } from "@/components/dashboard/panels/AidPanel";
-import type { RatesBundle } from "@/lib/calculator/types";
+import { WinterTuitionPanel } from "@/components/dashboard/panels/WinterTuitionPanel";
+import { SEMESTER_LABELS } from "@/lib/calculator/constants";
+import { availableSemesters, sameSemesterKind } from "@/lib/calculator/semesterConfig";
+import type { RatesBundle, Semester } from "@/lib/calculator/types";
 import type { HousingImages } from "@/lib/content/housingImages";
-import {
-  calculateTuition,
-  calculateDifferentialTuition,
-  calculateFees,
-  calculateHousing,
-  calculateDining,
-  calculateParking,
-  calculateInsurance,
-  calculateAid,
-  calculateTotal,
-  calculateNetTotal,
-} from "@/lib/calculator/calculateTotal";
+import { calculateAid, calculateTotal, calculateNetTotal } from "@/lib/calculator/calculateTotal";
 import { validateSelections } from "@/lib/calculator/validateSelections";
 
-const PANELS: Record<TabId, ComponentType<PanelProps>> = {
+type PanelComponent = ComponentType<PanelProps>;
+
+const REGULAR_SEMESTER_PANELS: Partial<Record<TabId, PanelComponent>> = {
   major: MajorPanel,
   tuition: TuitionPanel,
   housing: HousingPanel,
   parking: ParkingPanel,
   meals: MealsPanel,
   aid: AidPanel,
+};
+
+// Which panel each tab shows, per semester -- a Record<Semester, ...> so a new semester is a
+// compile error until it says what it renders. Winter swaps in its own tuition panel and
+// shares the Aid & Grants panel; it has no other tabs (see SEMESTER_TABS in tabs.ts).
+const PANELS: Record<Semester, Partial<Record<TabId, PanelComponent>>> = {
+  fall: REGULAR_SEMESTER_PANELS,
+  spring: REGULAR_SEMESTER_PANELS,
+  winter: { tuition: WinterTuitionPanel, aid: AidPanel },
 };
 
 // Positions and rotation angles are hand-jittered (arbitrary degree values,
@@ -193,21 +213,44 @@ export function DashboardShell({
   }, [hydrated, selections]);
 
   const [chatOpen, setChatOpen] = useState(false);
+  // Whether this visitor has already been introduced to the assistant (the
+  // first-visit card + the button's one-time nudge). null until localStorage has
+  // been read after mount, so a returning visitor never sees the card flash in.
+  const [assistantSeen, setAssistantSeen] = useState<boolean | null>(null);
+  // A message to send the moment the chat sheet opens (set by the intro card's
+  // example chips). Cleared by the chat once it has taken it.
+  const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  // A semester the user asked for that needs confirming first (it would clear their selections).
+  const [pendingSemester, setPendingSemester] = useState<Semester | null>(null);
 
   // Recomputed from scratch on every render from the full current selection
   // state -- never incrementally accumulated (see CLAUDE.md rule 3). Plain
   // function calls during render, not useEffect/derived state.
-  const tuition = calculateTuition(selections, rates) + calculateDifferentialTuition(selections, rates);
-  const fees = calculateFees(selections, rates);
-  const housing = calculateHousing(selections, rates);
-  const meals = calculateDining(selections, rates);
-  const parking = calculateParking(selections, rates);
-  const insurance = calculateInsurance(selections, rates);
+  const lines = breakdownLines(selections, rates);
   const total = calculateTotal(selections, rates);
   const aid = calculateAid(selections);
   const netTotal = calculateNetTotal(selections, rates);
   const validationResult = validateSelections(selections, rates);
+
+  useEffect(() => {
+    // Client-only value (localStorage) -- read after mount, not in the initializer,
+    // so the server and first client render agree.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAssistantSeen(readAssistantSeen());
+  }, []);
+
+  function dismissAssistantIntro() {
+    markAssistantSeen();
+    setAssistantSeen(true);
+  }
+
+  // Every way into the chat counts as "seen" -- the card and the pulse stop for good.
+  function openChat(prompt?: string) {
+    dismissAssistantIntro();
+    if (prompt) setChatPrompt(prompt);
+    setChatOpen(true);
+  }
 
   function handleTabChange(tab: TabId) {
     setActiveTab(tab);
@@ -218,7 +261,36 @@ export function DashboardShell({
     setSelections((current) => ({ ...current, ...patch }));
   }
 
-  const ActivePanel = PANELS[activeTab];
+  // The tabs this semester shows. If the stored active tab doesn't exist for it (a winter
+  // scenario loaded while "major" was active, or sessionStorage rehydrating into winter),
+  // fall back to its first tab -- derived while rendering, so there's no flash of a bad tab.
+  const tabs = getTabItems(selections.semester);
+  const currentTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0].id;
+  const ActivePanel = PANELS[selections.semester][currentTab];
+  const semesters = availableSemesters(rates);
+
+  // Fall <-> spring share every selection, so that's a plain switch. Crossing to a different
+  // kind of bill (winter) resets everything except education level and residency -- and asks
+  // first, but only if there's actually something to lose.
+  function applySemester(next: Semester) {
+    if (sameSemesterKind(selections.semester, next)) {
+      updateSelections({ semester: next });
+      return;
+    }
+    setSelections((current) => resetForSemesterChange(current, next));
+    const firstTab = getTabItems(next)[0].id;
+    setActiveTab(firstTab);
+    setVisitedTabs(new Set([firstTab]));
+  }
+
+  function requestSemesterChange(next: Semester) {
+    if (next === selections.semester) return;
+    if (!sameSemesterKind(selections.semester, next) && hasProgressToLose(selections)) {
+      setPendingSemester(next);
+      return;
+    }
+    applySemester(next);
+  }
 
   return (
     <div className="relative isolate flex flex-1 flex-col">
@@ -240,7 +312,23 @@ export function DashboardShell({
             <p className="text-lg font-medium text-foreground/80">Welcome back, {userName}</p>
           )}
         </div>
-        <p className="text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
+        <p className="hidden text-sm text-foreground/60 lg:block">Based on {academicYearLabel} rates</p>
+        {/* Below lg: the account control lives here (not in the sticky nav row, which
+            is just the step pill + semester control), level with the rates line. */}
+        <div className="mt-1 flex items-center justify-between gap-3 lg:hidden">
+          <p className="text-left text-sm text-foreground/60">Based on {academicYearLabel} rates</p>
+          <AccountMenu isSignedIn={isSignedIn} avatarUrl={avatarUrl} />
+        </div>
+        {/* Phones: the semester control lives here, full width -- three semesters no longer
+            fit beside the step pill in the sticky row (md+ keeps it in the nav). */}
+        <div className="mt-3 md:hidden">
+          <SemesterToggle
+            value={selections.semester}
+            onChange={requestSemesterChange}
+            semesters={semesters}
+            fullWidth
+          />
+        </div>
       </div>
 
       {lockedScenarioMessage && !lockedMessageDismissed && (
@@ -261,19 +349,30 @@ export function DashboardShell({
       )}
 
       <DashboardNav
-        activeTab={activeTab}
+        tabs={tabs}
+        activeTab={currentTab}
         onTabChange={handleTabChange}
+        visitedTabs={visitedTabs}
         semester={selections.semester}
-        onSemesterChange={(semester) => updateSelections({ semester })}
+        semesters={semesters}
+        onSemesterChange={requestSemesterChange}
         chatCollapsed={chatCollapsed}
         onToggleChat={() => setChatCollapsed((current) => !current)}
+        onOpenChat={() => openChat()}
         isSignedIn={isSignedIn}
         avatarUrl={avatarUrl}
       />
 
       <div className="grid flex-1 grid-cols-1 items-start gap-4 p-4 md:grid-cols-[1fr_auto] md:p-8">
         <div className="flex min-w-0 flex-col gap-4">
-          <ProgressChecklist visited={visitedTabs} />
+          {assistantSeen === false && (
+            <AssistantIntroCard onPickExample={(prompt) => openChat(prompt)} onDismiss={dismissAssistantIntro} />
+          )}
+
+          {/* Phones show progress inside the step pill's list instead. */}
+          <div className="hidden lg:block">
+            <ProgressChecklist tabs={tabs} visited={visitedTabs} />
+          </div>
 
           {/* key={activeTab} forces a remount on every tab switch so the
               fade-in-up animation replays each time -- otherwise this div
@@ -283,23 +382,24 @@ export function DashboardShell({
               lives in DashboardShell itself, passed down as a prop -- this
               div and its children hold no state of their own. */}
           <div
-            key={activeTab}
+            key={`${selections.semester}-${currentTab}`}
             className="animate-fade-in-up relative flex flex-1 flex-col rounded-none bg-card/85 p-6 ring-1 ring-foreground/10 shadow-[-6px_10px_20px_-2px_rgba(0,0,0,0.35)]"
           >
-            <PanelNavArrows activeTab={activeTab} onTabChange={handleTabChange} />
+            <PanelNavArrows tabs={tabs} activeTab={currentTab} onTabChange={handleTabChange} />
+            {ActivePanel && (
             <ActivePanel
               selections={selections}
               onChange={updateSelections}
               spacious={chatCollapsed}
               rates={rates}
               housingImages={housingImages}
+              onOpenChat={() => openChat()}
             />
+            )}
+            <PanelStepButtons tabs={tabs} activeTab={currentTab} onTabChange={handleTabChange} />
           </div>
 
-          <CostBreakdown
-            semester={selections.semester}
-            values={{ tuition, fees, housing, meals, parking, insurance, aid }}
-          />
+          <CostBreakdown semester={selections.semester} lines={lines} aid={aid} />
 
           <SummaryBar
             semester={selections.semester}
@@ -309,6 +409,8 @@ export function DashboardShell({
             validation={validationResult}
             isSignedIn={isSignedIn}
             selections={selections}
+            onOpenChat={() => openChat()}
+            nudgeChat={assistantSeen === false}
           />
         </div>
 
@@ -317,13 +419,42 @@ export function DashboardShell({
         )}
       </div>
 
-      <ChatFab onClick={() => setChatOpen(true)} />
       <ChatOverlay
         open={chatOpen}
         onOpenChange={setChatOpen}
         selections={selections}
         onSelectionsChange={updateSelections}
+        initialPrompt={chatPrompt}
+        onPromptConsumed={() => setChatPrompt(null)}
       />
+
+      {/* Crossing to a different kind of bill (fall/spring <-> winter) clears the selections,
+          so ask first -- and point at the two ways to keep the plan. */}
+      <AlertDialog open={pendingSemester !== null} onOpenChange={(open) => !open && setPendingSemester(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Switch to {pendingSemester ? SEMESTER_LABELS[pendingSemester] : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSemester ? SEMESTER_LABELS[pendingSemester] : ""} is a different kind of bill, so switching clears
+              what you&apos;ve entered (your education level and residency stay). To keep your current plan first,{" "}
+              {isSignedIn ? "save it" : "sign in and save it"}, or use Generate to save a PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep my plan</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingSemester) applySemester(pendingSemester);
+                setPendingSemester(null);
+              }}
+            >
+              Switch to {pendingSemester ? SEMESTER_LABELS[pendingSemester] : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

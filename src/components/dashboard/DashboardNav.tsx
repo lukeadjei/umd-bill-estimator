@@ -1,55 +1,61 @@
 import type { Semester } from "@/lib/calculator/types";
-import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SemesterToggle } from "@/components/dashboard/SemesterToggle";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-} from "@/components/ui/dropdown-menu";
-import { TAB_ITEMS, type TabId } from "@/components/dashboard/tabs";
+import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { StepPill } from "@/components/dashboard/StepPill";
+import type { TabId, TabItem } from "@/components/dashboard/tabs";
 import { MessageCircleIcon } from "lucide-react";
-import { signOutAction } from "@/app/settings/actions";
 
 export function DashboardNav({
+  tabs,
   activeTab,
   onTabChange,
+  visitedTabs,
   semester,
+  semesters,
   onSemesterChange,
   chatCollapsed,
   onToggleChat,
+  onOpenChat,
   isSignedIn,
   avatarUrl,
 }: {
+  tabs: TabItem[];
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  visitedTabs: Set<TabId>;
   semester: Semester;
+  semesters: readonly Semester[];
   onSemesterChange: (semester: Semester) => void;
   chatCollapsed: boolean;
   onToggleChat: () => void;
+  onOpenChat: () => void;
   isSignedIn: boolean;
   avatarUrl: string | null;
 }) {
   return (
     <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8">
-      {/* Horizontally scrollable on mobile -- five bubbles plus the semester
-          toggle don't reliably fit a narrow viewport, so this row scrolls
-          instead of wrapping (wrapping would push the semester toggle to a
-          second line and make the nav's height jump between tabs). The
-          right-edge fade is a static mobile-only hint that there's more to
-          scroll to -- everything fits without scrolling at md+, so it's
-          hidden there rather than trying to detect overflow at runtime. */}
-      <div className="relative min-w-0 flex-1">
+      {/* Phone: one pill showing the current step and "N of total", opening a
+          vertical list of every step -- the tab bar below scrolled sideways
+          and cut tabs off. The sticky row is deliberately just this pill and
+          the semester control; account and theme controls live in the page
+          header on mobile (see DashboardShell) so nothing competes for width. */}
+      <div className="min-w-0 flex-1 lg:hidden">
+        <StepPill tabs={tabs} activeTab={activeTab} visited={visitedTabs} onTabChange={onTabChange} onOpenChat={onOpenChat} />
+      </div>
+
+      {/* lg+: the full tab bar fits (below that the chat panel takes half the width at tablet sizes). Still horizontally scrollable in case a
+          narrow tablet width can't hold it; the right-edge fade is a static
+          hint for that case only. */}
+      <div className="relative hidden min-w-0 flex-1 lg:block">
         <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TabId)}>
             {/* TabsList/TabsTrigger restyled as fully-rounded "bubble" pills --
                 base-ui's Tabs gives keyboard/ARIA behavior for free, the bubble
                 look itself is just className overrides on top of it. */}
             <TabsList className="h-auto w-max gap-1 rounded-full bg-muted p-1">
-              {TAB_ITEMS.map((tab) => (
+              {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
@@ -61,10 +67,6 @@ export function DashboardNav({
             </TabsList>
           </Tabs>
         </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent md:hidden"
-        />
       </div>
 
       {/* Same soft primary-color glow language as the homepage's title/card
@@ -73,11 +75,15 @@ export function DashboardNav({
           looking at" (semester + chat), rather than a plain border. */}
       <div
         aria-hidden="true"
-        className="hidden h-9 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-transparent via-primary/50 to-transparent md:block"
+        className="hidden h-9 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-transparent via-primary/50 to-transparent lg:block"
       />
 
       <div className="flex shrink-0 items-center gap-2">
-        <SemesterToggle value={semester} onChange={onSemesterChange} />
+        {/* md+ only: on phones the toggle is a full-width control in the page header,
+            because three semesters no longer fit next to the step pill. */}
+        <div className="hidden md:block">
+          <SemesterToggle value={semester} onChange={onSemesterChange} semesters={semesters} />
+        </div>
 
         {/* Desktop-only entry point for reopening the assistant chat once
             it's collapsed -- the collapsed panel itself renders nothing, so
@@ -95,46 +101,10 @@ export function DashboardNav({
           <MessageCircleIcon />
         </Button>
 
-        {/* Dashboard's entry point into settings/scenarios/sign-out -- shown
-            only for signed-in users (guests see nothing in its place, no
-            placeholder icon). Plain <img>, not next/image: avatar_url is an
-            external Google-hosted URL and next/image would require
-            allow-listing that domain in next.config.ts's images.remotePatterns. */}
-        {isSignedIn && avatarUrl !== null && (
-          <DropdownMenu>
-            <DropdownMenuTrigger aria-label="Open account menu" className="rounded-full">
-              <img
-                src={avatarUrl}
-                alt="Your profile"
-                referrerPolicy="no-referrer"
-                className="size-8 rounded-full ring-1 ring-foreground/10 object-cover"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLinkItem href="/settings">Settings</DropdownMenuLinkItem>
-              <DropdownMenuLinkItem href="/settings?tab=scenarios">Saved Scenarios</DropdownMenuLinkItem>
-              <DropdownMenuItem onClick={() => signOutAction()}>Sign out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        {/* Standing sign-in entry point for guests -- previously the only
-            sign-in prompt anywhere on the dashboard was SummaryBar's "Sign in
-            to save your plan" button, which only appears once a guest is
-            already trying to save. This gives guests a permanent, low-key way
-            in from the persistent top nav instead. */}
-        {!isSignedIn && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            nativeButton={false}
-            render={<Link href="/sign-in" />}
-          >
-            Sign in
-          </Button>
-        )}
+        {/* Below lg the account control sits in the page header instead. */}
+        <div className="hidden lg:block">
+          <AccountMenu isSignedIn={isSignedIn} avatarUrl={avatarUrl} />
+        </div>
       </div>
     </div>
   );

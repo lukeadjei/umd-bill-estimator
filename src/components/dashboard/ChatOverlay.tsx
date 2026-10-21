@@ -12,17 +12,26 @@ export function ChatOverlay({
   onOpenChange,
   selections,
   onSelectionsChange,
+  initialPrompt,
+  onPromptConsumed,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selections: DashboardSelections;
   onSelectionsChange: (patch: Partial<DashboardSelections>) => void;
+  initialPrompt?: string | null;
+  onPromptConsumed?: () => void;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-none p-0 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] data-[side=bottom]:h-[85vh] md:hidden">
         <SheetTitle className="sr-only">Assistant chat</SheetTitle>
-        <ChatPanelContent selections={selections} onSelectionsChange={onSelectionsChange} />
+        <ChatPanelContent
+          selections={selections}
+          onSelectionsChange={onSelectionsChange}
+          initialPrompt={initialPrompt}
+          onPromptConsumed={onPromptConsumed}
+        />
       </SheetContent>
     </Sheet>
   );

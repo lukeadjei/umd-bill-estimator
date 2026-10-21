@@ -60,7 +60,7 @@ export function ThemeToggle() {
       size="icon"
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="fixed top-4 right-4 z-[60] rounded-full bg-background shadow-md print:hidden"
+      className="absolute top-4 right-4 z-[60] rounded-full bg-background shadow-md lg:fixed print:hidden"
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
     </Button>

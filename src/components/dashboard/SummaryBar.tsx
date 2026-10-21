@@ -4,7 +4,9 @@ import { SEMESTER_LABELS } from "@/lib/calculator/constants";
 import type { Semester } from "@/lib/calculator/types";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChatFab } from "@/components/dashboard/ChatFab";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,8 @@ type SummaryBarProps = {
   validation: { valid: boolean; errors: { field: string; message: string }[] };
   isSignedIn: boolean;
   selections: DashboardSelections;
+  onOpenChat: () => void;
+  nudgeChat: boolean;
 };
 
 function formatCurrency(value: number) {
@@ -44,9 +48,22 @@ function formatCurrency(value: number) {
 // in that state would be misleading. In that case we hide the dollar total,
 // disable the CTA, and surface the validation errors instead -- this is the
 // only place in the current UI those errors reach the user.
-export function SummaryBar({ semester, total, aid, netTotal, validation, isSignedIn, selections }: SummaryBarProps) {
+export function SummaryBar({
+  semester,
+  total,
+  aid,
+  netTotal,
+  validation,
+  isSignedIn,
+  selections,
+  onOpenChat,
+  nudgeChat,
+}: SummaryBarProps) {
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  // Phones only: the validation messages stay collapsed behind "N things to fix"
+  // so a long error list can't eat a quarter of the screen (sm+ always lists them).
+  const [errorsOpen, setErrorsOpen] = useState(false);
   const [note, setNote] = useState("");
   // Only meaningful once aid actually applies -- with no aid entered, before
   // and after are identical, so the toggle itself stays hidden rather than
@@ -90,7 +107,13 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
   }
 
   return (
-    <div className="sticky bottom-0 z-30 flex flex-col gap-3 rounded-none border-t border-border bg-card/95 px-4 py-4 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6">
+    // The sticky wrapper is the positioning context for the phone-only chat button
+    // (ChatFab), which floats just above the bar however tall the bar gets.
+    // mt-14 (phones) reserves the strip the chat button floats in, so it never sits on
+    // top of the content right above the bar (the breakdown header, the panel's Next button).
+    <div className="sticky bottom-0 z-30 mt-14 md:mt-0">
+      <ChatFab onClick={onOpenChat} nudge={nudgeChat} />
+    <div className="flex flex-col gap-3 rounded-none border-t border-border bg-card/95 px-4 py-4 shadow-[0_-8px_20px_-3px_rgba(0,0,0,0.32)] backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:px-6">
       <div>
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
@@ -134,20 +157,31 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
           <p className="mt-1 text-xs text-muted-foreground">Estimate only -- actual UMD charges may differ.</p>
         )}
         {validation.errors.length > 0 && (
-          <ul className="mt-1.5 flex flex-col gap-0.5">
-            {validation.errors.map((error) => (
-              <li key={error.field} className="text-xs font-medium text-destructive">
-                {error.message}
-              </li>
-            ))}
-          </ul>
+          <>
+            <button
+              type="button"
+              className="-my-1 mt-0 flex items-center gap-1 py-1.5 text-xs font-medium text-destructive sm:hidden"
+              onClick={() => setErrorsOpen((open) => !open)}
+              aria-expanded={errorsOpen}
+            >
+              {validation.errors.length} {validation.errors.length === 1 ? "thing" : "things"} to fix
+              <ChevronDownIcon className={`size-3.5 transition-transform ${errorsOpen ? "rotate-180" : ""}`} />
+            </button>
+            <ul className={`mt-1.5 flex-col gap-0.5 sm:flex ${errorsOpen ? "flex" : "hidden"}`}>
+              {validation.errors.map((error) => (
+                <li key={error.field} className="text-xs font-medium text-destructive">
+                  {error.message}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         {isSignedIn && saveState.status === "error" && (
           <p className="mt-1.5 text-xs font-medium text-destructive">{saveState.message}</p>
         )}
       </div>
 
-      <div className="flex items-center gap-2 sm:shrink-0">
+      <div className="flex items-center gap-2 sm:shrink-0 [&>*]:flex-1 sm:[&>*]:flex-none">
         {/* Generate never touches the database -- it just navigates to a
             page that reads the current selections back out of sessionStorage
             and formats them for printing/PDF -- so unlike Save, it's
@@ -158,7 +192,7 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
           type="button"
           variant="outline"
           size="lg"
-          className="rounded-full text-lg"
+          className="rounded-full text-base sm:text-lg"
           disabled={!validation.valid}
           nativeButton={false}
           render={<Link href="/dashboard/results" />}
@@ -171,15 +205,16 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
             whether or not the current plan is valid, because scenarios.user_id
             requires a real signed-in user. */}
         {!isSignedIn ? (
-          <Button type="button" size="lg" className="rounded-full text-lg" nativeButton={false} render={<Link href="/sign-in" />}>
-            Sign in to save your plan
+          <Button type="button" size="lg" className="rounded-full text-base sm:text-lg" nativeButton={false} render={<Link href="/sign-in" />}>
+            <span className="sm:hidden">Sign in to save</span>
+            <span className="hidden sm:inline">Sign in to save your plan</span>
           </Button>
         ) : (
           <>
             <Button
               type="button"
               size="lg"
-              className="rounded-full text-lg"
+              className="rounded-full text-base sm:text-lg"
               disabled={!validation.valid || saveState.status === "saving"}
               onClick={() => setNoteDialogOpen(true)}
             >
@@ -226,6 +261,7 @@ export function SummaryBar({ semester, total, aid, netTotal, validation, isSigne
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

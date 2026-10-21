@@ -57,10 +57,17 @@ export function ChatPanelContent({
   selections,
   onSelectionsChange,
   headerAction,
+  initialPrompt,
+  onPromptConsumed,
 }: {
   selections: DashboardSelections;
   onSelectionsChange: (patch: Partial<DashboardSelections>) => void;
   headerAction?: React.ReactNode;
+  // A message to send as soon as this opens (the example chips on the dashboard's
+  // first-visit card). Handed over once: onPromptConsumed lets the owner clear it so
+  // reopening the chat later doesn't send it again.
+  initialPrompt?: string | null;
+  onPromptConsumed?: () => void;
 }) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -70,6 +77,24 @@ export function ChatPanelContent({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
+
+  // The guard makes the hand-off idempotent: React runs effects twice in development
+  // (StrictMode) and could re-run this for the same prompt, which would send the
+  // message twice. Reset when the prompt clears so the same example can be sent again.
+  const handledPromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialPrompt) {
+      handledPromptRef.current = null;
+      return;
+    }
+    if (handledPromptRef.current === initialPrompt) return;
+    handledPromptRef.current = initialPrompt;
+    onPromptConsumed?.();
+    void sendMessage(initialPrompt);
+    // Runs only when a new prompt arrives -- sendMessage is re-created every render
+    // and would otherwise re-fire this on each one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();

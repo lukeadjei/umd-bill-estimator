@@ -44,6 +44,8 @@ export type PanelProps = {
   spacious: boolean;
   rates: RatesBundle;
   housingImages: HousingImages;
+  // Opens the assistant (phones). Optional: only some panels show an "ask the assistant" hint.
+  onOpenChat?: () => void;
 };
 
 // sessionStorage (not localStorage) -- deliberately scoped to "until this
@@ -63,7 +65,9 @@ export function readStoredSelections(): DashboardSelections | null {
   try {
     const raw = sessionStorage.getItem(SELECTIONS_STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as DashboardSelections;
+    // Merged over the defaults so a selection saved by an older version of the app (before a
+    // field like winterClassFormat existed) still comes back as a complete object.
+    return { ...DEFAULT_SELECTIONS, ...(JSON.parse(raw) as Partial<DashboardSelections>) };
   } catch {
     return null;
   }
@@ -75,4 +79,25 @@ export function writeStoredSelections(selections: DashboardSelections): void {
   } catch {
     // Non-fatal -- see readStoredSelections.
   }
+}
+
+// Switching to a semester of a different kind (fall/spring -> winter, or back) is "a whole
+// new thing", so everything resets except the two answers that mean the same in both:
+// education level and residency. Grants reset too -- they belong to the plan being left.
+export function resetForSemesterChange(selections: DashboardSelections, semester: DashboardSelections["semester"]): DashboardSelections {
+  return {
+    ...DEFAULT_SELECTIONS,
+    semester,
+    educationLevel: selections.educationLevel,
+    residency: selections.residency,
+  };
+}
+
+// True when a semester switch would throw something away: any selection differs from what
+// the reset would leave behind. Education level and residency never count -- they survive.
+export function hasProgressToLose(selections: DashboardSelections): boolean {
+  const afterReset = resetForSemesterChange(selections, selections.semester);
+  return (Object.keys(afterReset) as (keyof DashboardSelections)[]).some(
+    (key) => JSON.stringify(selections[key]) !== JSON.stringify(afterReset[key])
+  );
 }
