@@ -207,7 +207,7 @@ export function DashboardShell({
   const total = calculateTotal(selections, rates);
   const aid = calculateAid(selections);
   const netTotal = calculateNetTotal(selections, rates);
-  const validationResult = validateSelections(selections);
+  const validationResult = validateSelections(selections, rates);
 
   function handleTabChange(tab: TabId) {
     setActiveTab(tab);

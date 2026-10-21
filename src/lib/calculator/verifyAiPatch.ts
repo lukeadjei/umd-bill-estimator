@@ -1,4 +1,4 @@
-import { SEMESTERS } from "./constants";
+import { SELECTABLE_SEMESTERS } from "./constants";
 import { MAX_CREDIT_HOURS, MIN_CREDIT_HOURS } from "./constants";
 import type { RatesBundle, Selections } from "./types";
 
@@ -39,7 +39,8 @@ export function mergeSelectionsPatch(base: Selections, patch: AiSelectionsPatch)
   return { ...base, ...patch };
 }
 
-const SEMESTER_VALUES = SEMESTERS;
+// Only semesters a user can pick today -- winter joins once its UI and AI support ship.
+const SEMESTER_VALUES = SELECTABLE_SEMESTERS;
 const EDUCATION_LEVEL_VALUES = ["undergraduate", "graduate"] as const;
 const RESIDENCY_VALUES = ["resident", "non_resident"] as const;
 const LIVING_SITUATION_VALUES = ["on_campus", "commuter"] as const;

@@ -761,7 +761,7 @@ export type Database = {
           housing_rate_id: string | null
           id: string
           insurance_selected: boolean
-          living_situation: string
+          living_situation: string | null
           major: string | null
           misc_grants: Json
           name: string
@@ -775,6 +775,9 @@ export type Database = {
           tuition_rate_id: string | null
           updated_at: string
           user_id: string
+          winter_class_format: string | null
+          winter_graduate_tuition_rate_id: string | null
+          winter_tuition_rate_id: string | null
         }
         Insert: {
           academic_year_id: string
@@ -787,7 +790,7 @@ export type Database = {
           housing_rate_id?: string | null
           id?: string
           insurance_selected?: boolean
-          living_situation: string
+          living_situation?: string | null
           major?: string | null
           misc_grants?: Json
           name: string
@@ -801,6 +804,9 @@ export type Database = {
           tuition_rate_id?: string | null
           updated_at?: string
           user_id: string
+          winter_class_format?: string | null
+          winter_graduate_tuition_rate_id?: string | null
+          winter_tuition_rate_id?: string | null
         }
         Update: {
           academic_year_id?: string
@@ -813,7 +819,7 @@ export type Database = {
           housing_rate_id?: string | null
           id?: string
           insurance_selected?: boolean
-          living_situation?: string
+          living_situation?: string | null
           major?: string | null
           misc_grants?: Json
           name?: string
@@ -827,6 +833,9 @@ export type Database = {
           tuition_rate_id?: string | null
           updated_at?: string
           user_id?: string
+          winter_class_format?: string | null
+          winter_graduate_tuition_rate_id?: string | null
+          winter_tuition_rate_id?: string | null
         }
         Relationships: [
           {
@@ -876,6 +885,20 @@ export type Database = {
             columns: ["tuition_rate_id"]
             isOneToOne: false
             referencedRelation: "tuition_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenarios_winter_graduate_tuition_rate_id_fkey"
+            columns: ["winter_graduate_tuition_rate_id"]
+            isOneToOne: false
+            referencedRelation: "winter_graduate_tuition_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scenarios_winter_tuition_rate_id_fkey"
+            columns: ["winter_tuition_rate_id"]
+            isOneToOne: false
+            referencedRelation: "winter_tuition_rates"
             referencedColumns: ["id"]
           },
         ]

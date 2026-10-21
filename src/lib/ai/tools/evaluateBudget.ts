@@ -124,7 +124,7 @@ export const evaluateBudgetTool: AiTool = {
       }
 
       const merged = mergeSelectionsPatch(context.currentSelections, verifyResult.patch);
-      const validation = validateSelections(merged);
+      const validation = validateSelections(merged, context.rates);
 
       if (!validation.valid) {
         scenarios.push({

@@ -1,11 +1,21 @@
+import { calculateWinterFee, calculateWinterTuition } from "./calculateWinter";
+import { SEMESTER_CONFIG, semesterPrices, type PricedCategory } from "./semesterConfig";
 import type { RatesBundle, Selections, Semester } from "./types";
 
 // Which price column holds each semester's figure -- a Record (not a ternary) so a new
 // semester fails to compile here instead of silently getting spring's price.
-const PRICE_COLUMN = { fall: "fall_price", spring: "spring_price" } as const satisfies Record<
+// A semester with no per-semester price column (winter) maps to null; the categories that
+// use this (insurance, dining) are never priced for such a semester, so reaching the throw is a bug.
+const PRICE_COLUMN = { fall: "fall_price", spring: "spring_price", winter: null } as const satisfies Record<
   Semester,
-  "fall_price" | "spring_price"
+  "fall_price" | "spring_price" | null
 >;
+
+function semesterPriceColumn(semester: Semester): "fall_price" | "spring_price" {
+  const column = PRICE_COLUMN[semester];
+  if (column === null) throw new Error(`calculateTotal: ${semester} has no per-semester price column`);
+  return column;
+}
 
 // A missing match means the selection doesn't correspond to real rate data --
 // that's a bug (stale reference, mismatched dropdown), not a "missing
@@ -24,6 +34,7 @@ function findOrThrow<T>(rows: T[], predicate: (row: T) => boolean, description: 
 // than guessing a default (consistent with the "missing selection = $0"
 // rule for every other category).
 export function calculateTuition(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "tuition")) return 0;
   const { educationLevel, residency, creditHours } = selections;
   if (educationLevel === null || residency === null || creditHours === null) return 0;
 
@@ -48,6 +59,7 @@ export function calculateTuition(selections: Selections, rates: RatesBundle): nu
 
 // Same flat-vs-per-credit split as calculateTuition, added as a separate line item.
 export function calculateDifferentialTuition(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "differentialTuition")) return 0;
   // Graduate students never get charged differential tuition -- confirmed
   // (it's an undergrad junior/senior classification only).
   if (selections.educationLevel === "graduate") return 0;
@@ -63,6 +75,7 @@ export function calculateDifferentialTuition(selections: Selections, rates: Rate
 
 // Flat rate above the fee credit threshold, different flat rate below it -- no per-credit math, unlike tuition.
 export function calculateFees(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "fees")) return 0;
   const { educationLevel, creditHours } = selections;
   if (educationLevel === null || creditHours === null) return 0;
 
@@ -80,13 +93,15 @@ export function calculateFees(selections: Selections, rates: RatesBundle): numbe
 // Eligibility (who's allowed to opt in) is validateSelections' job -- this just prices it if selected.
 // calculateTotal is one semester at a time, so this picks fall_price or spring_price -- never both.
 export function calculateInsurance(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "insurance")) return 0;
   if (!selections.insurance) return 0;
   const rate = findOrThrow(rates.healthInsuranceRates, () => true, "health insurance rate");
-  return rate[PRICE_COLUMN[selections.semester]];
+  return rate[semesterPriceColumn(selections.semester)];
 }
 
 // housing_rates.rate is the full ACADEMIC YEAR total -- half of it is one semester's share.
 export function calculateHousing(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "housing")) return 0;
   if (!selections.housing) return 0;
   const { roomType, buildingCategory } = selections.housing;
   const rate = findOrThrow(
@@ -99,6 +114,7 @@ export function calculateHousing(selections: Selections, rates: RatesBundle): nu
 
 // resident + block are mutually exclusive by construction (validateSelections enforces this, not here).
 export function calculateDining(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "dining")) return 0;
   if (selections.residentDiningPlan) {
     const { planName } = selections.residentDiningPlan;
     const rate = findOrThrow(
@@ -107,7 +123,7 @@ export function calculateDining(selections: Selections, rates: RatesBundle): num
       `resident dining plan (${planName})`
     );
     // Resident plans price fall/spring separately -- pick this semester's price, don't sum both.
-    return rate[PRICE_COLUMN[selections.semester]];
+    return rate[semesterPriceColumn(selections.semester)];
   }
 
   if (selections.blockDiningPlan) {
@@ -129,6 +145,7 @@ export function calculateDining(selections: Selections, rates: RatesBundle): num
 // charged in full to whichever semester is being calculated -- UMD bills it that
 // way, no splitting, unlike housing.
 export function calculateParking(selections: Selections, rates: RatesBundle): number {
+  if (!semesterPrices(selections.semester, "parking")) return 0;
   if (!selections.parking) return 0;
   const { permitType, term } = selections.parking;
   const rate = findOrThrow(
@@ -139,20 +156,32 @@ export function calculateParking(selections: Selections, rates: RatesBundle): nu
   return rate.price;
 }
 
-// One semester's total (fall or spring, per selections.semester) -- not the full year.
+// One pricer per category -- a Record over PricedCategory so adding a category
+// is a compile error until it has a pricer. The sub-functions above are
+// unchanged; this table just says which function prices which category.
+const CATEGORY_PRICERS: Record<PricedCategory, (selections: Selections, rates: RatesBundle) => number> = {
+  tuition: calculateTuition,
+  differentialTuition: calculateDifferentialTuition,
+  fees: calculateFees,
+  insurance: calculateInsurance,
+  housing: calculateHousing,
+  dining: calculateDining,
+  parking: calculateParking,
+  winterTuition: calculateWinterTuition,
+  winterFee: calculateWinterFee,
+};
+
+// One term's total (fall, spring or winter, per selections.semester) -- not the full year.
 // This is the billed (gross) total, before any aid -- the sole pricing path for
 // every rate-table-backed category (CLAUDE.md rule 1: no AI/UI code path invents
-// a dollar figure independently of this module). Summing two calls (fall + spring)
-// gets the annual figure, a separate concern for later.
+// a dollar figure independently of this module). It sums whichever categories
+// SEMESTER_CONFIG lists for the selected semester, so there is no per-season
+// branching here. Summing two calls (fall + spring) gets the annual figure, a
+// separate concern for later.
 export function calculateTotal(selections: Selections, rates: RatesBundle): number {
-  return (
-    calculateTuition(selections, rates) +
-    calculateDifferentialTuition(selections, rates) +
-    calculateFees(selections, rates) +
-    calculateInsurance(selections, rates) +
-    calculateHousing(selections, rates) +
-    calculateDining(selections, rates) +
-    calculateParking(selections, rates)
+  return SEMESTER_CONFIG[selections.semester].categories.reduce(
+    (total, category) => total + CATEGORY_PRICERS[category](selections, rates),
+    0
   );
 }
 

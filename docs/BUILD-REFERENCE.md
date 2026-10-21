@@ -36,6 +36,7 @@ How the app is **currently built and configured**. This is a structure reference
 **Access model:**
 - Live rate tables (incl. `academic_years`): RLS on, public `select` policy.
 - `_staging` tables: RLS on, no policies — service-role only.
+- `scenarios` also stores winter estimates: `winter_tuition_rate_id` / `winter_graduate_tuition_rate_id` (FKs to the winter tables; exactly one set, enforced in code — the row also identifies level, residency and credit count) and `winter_class_format`. `living_situation` is nullable (winter has none). Which ids are stored per semester lives in `src/lib/supabase/scenarioMapping.ts` (save and load, dispatched per semester).
 - `scenarios`: RLS lets a user read only their own rows; **no write policies**, so all writes use the service-role client, which bypasses RLS — every write query must filter on the verified session's `user_id` explicitly. Deleting an auth user cascades to their scenarios.
 - `ai_parse_logs`: service-role only (RLS on, no policies).
 
@@ -47,6 +48,9 @@ How the app is **currently built and configured**. This is a structure reference
 - `calculateAid` sums the four grant sources; `calculateNetTotal` = total − aid, **not floored at 0** (negative = estimated refund).
 - `validateSelections` — separate; handles always-required (tuition, credit hours) and conditionally-required (dining plan unless housing has a kitchen) fields.
 - Totals are recomputed from the full selection state on every change — never accumulated.
+- **Per-semester behavior is data, not branches** (`semesterConfig.ts`): `SEMESTER_CONFIG[semester]` lists the categories that semester prices and its credit-hour range (a function of `rates`, since winter's cap is `academic_years.winter_max_credit_hours`). `calculateTotal` sums those categories through a `CATEGORY_PRICERS` table; each category pricer returns 0 if its semester doesn't price it. `validateSelections(selections, rates)` checks the fields every semester needs, then runs `SEMESTER_RULES[semester]` (regular semester: living situation → housing/dining/parking rules; winter: availability, whole credits, fee choice). Adding a season = add to `SEMESTERS` (compiler lists every lookup), one config entry, its rate data, and a pricer per new category.
+- **Winter pricing** (`calculateWinter.ts`): tuition is a lookup of the published total for the credit count by level × residency (never multiplied; a credit count outside the chart prices $0 and validation reports it); the fee is `winterClassFormat` → campus services ($116) or distance learning ($55), never both.
+- `SELECTABLE_SEMESTERS` (constants.ts) is what the toggle and the AI patch schema offer; winter is a real `Semester` but not selectable until its UI/AI support ship.
 - The AI never computes dollar amounts; `calculateTotal` is the only source of prices.
 - `RatesBundle.winter` holds the winter tuition/fee rows (null when the year has no usable winter data; built by `src/lib/supabase/buildWinterRates.ts`). `Selections.winterClassFormat` (`in_person` | `online_only` | null) picks the winter fee. Winter pricing/validation arrives in task 5 of v2.
 - `majors.ts` — `MAJORS` list and `DIFFERENTIAL_TUITION_MAJORS` (drives the differential-tuition warning).
@@ -106,7 +110,7 @@ npm run scrape -- <academic_year_id>     # fetch UMD pages into *_staging
 npm run promote -- <academic_year_id>    # copy reviewed staging into live tables (ALL rate tables)
 npm run promote -- <academic_year_id> winter   # winter tables only
 ```
-Both are idempotent (clear-before-write). `<academic_year_id>` is the UUID from `academic_years`. **Full `promote` delete-and-re-inserts every live rate table, which fails with a foreign-key error once any saved scenario references those rows** (`scenarios.tuition_rate_id` etc. have no cascade) — use `winter` for winter-only promotion; fixing full promote for an existing year is an open v2 backlog item. The winter promote also checks that the staged winter charts cover every credit count from 1 up to `academic_years.winter_max_credit_hours` before writing, and never touches that column.
+Both are idempotent (clear-before-write). `<academic_year_id>` is the UUID from `academic_years`. **Full `promote` delete-and-re-inserts every live rate table, which fails with a foreign-key error once any saved scenario references those rows** (`scenarios.tuition_rate_id` etc. have no cascade) — use `winter` for winter-only promotion (it upserts on the natural unique keys so winter scenarios' foreign keys never block it); fixing full promote for an existing year is an open v2 backlog item. The winter promote also checks that the staged winter charts cover every credit count from 1 up to `academic_years.winter_max_credit_hours` before writing, and never touches that column.
 
 Scrape source group 7 is the winter page (`exst.umd.edu/.../winter-session/tuition-and-fees`, `fetchWinterSessionPage.ts`): reads credit counts from the table headers, fails loudly if either table or fee row is missing or the 1..N credit chart is incomplete.
 

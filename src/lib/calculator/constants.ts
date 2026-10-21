@@ -3,9 +3,14 @@ import type { Selections, Semester } from "./types";
 // The one list of semesters. `Semester` (types.ts) is derived from it, and every
 // per-semester lookup in the codebase is a Record<Semester, ...> so adding a value
 // here is a compile error everywhere that has to decide what to do with it.
-export const SEMESTERS = ["fall", "spring"] as const;
+export const SEMESTERS = ["fall", "spring", "winter"] as const;
 
-export const SEMESTER_LABELS: Record<Semester, string> = { fall: "Fall", spring: "Spring" };
+// The semesters a user can actually pick right now. Winter is a real Semester (the engine prices
+// it) but stays out of here until its dashboard UI exists, so the toggle and the AI patch schema
+// can't select a half-built winter. Add "winter" here when that UI ships.
+export const SELECTABLE_SEMESTERS = ["fall", "spring"] as const satisfies readonly Semester[];
+
+export const SEMESTER_LABELS: Record<Semester, string> = { fall: "Fall", spring: "Spring", winter: "Winter" };
 
 export function isSemester(value: unknown): value is Semester {
   return SEMESTERS.some((semester) => semester === value);
