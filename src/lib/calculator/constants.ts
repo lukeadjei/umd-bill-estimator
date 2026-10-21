@@ -5,11 +5,6 @@ import type { Selections, Semester } from "./types";
 // here is a compile error everywhere that has to decide what to do with it.
 export const SEMESTERS = ["fall", "spring", "winter"] as const;
 
-// The semesters the AI assistant's tools may set. Winter is a real Semester that the
-// dashboard UI offers (see availableSemesters in semesterConfig.ts), but the assistant
-// can't set it yet -- add "winter" here when the AI gains winter support.
-export const SELECTABLE_SEMESTERS = ["fall", "spring"] as const satisfies readonly Semester[];
-
 export const SEMESTER_LABELS: Record<Semester, string> = { fall: "Fall", spring: "Spring", winter: "Winter" };
 
 export function isSemester(value: unknown): value is Semester {

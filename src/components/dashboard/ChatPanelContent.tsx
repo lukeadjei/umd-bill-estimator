@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MAX_MESSAGE_LENGTH } from "@/lib/ai/chatInput";
-import type { EvaluateBudgetResult } from "@/lib/ai/tools";
+import type { EvaluateBudgetResult, FindMaxCreditsResult } from "@/lib/ai/tools";
 import { ChatBudgetComparison } from "./ChatBudgetComparison";
 import { ChatConfirmationChips } from "./ChatConfirmationChips";
+import { ChatMaxCreditsCard } from "./ChatMaxCreditsCard";
 import { ChatPhotoPreview } from "./ChatPhotoPreview";
 import type { DashboardSelections } from "./selections";
 import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
@@ -13,7 +14,8 @@ import type { AiSelectionsPatch } from "@/lib/calculator/verifyAiPatch";
 type ChatToolResult =
   | { name: "setSelections"; result: AiSelectionsPatch }
   | { name: "getHousingPhotos"; result: { photos: string[] } }
-  | { name: "evaluateBudget"; result: EvaluateBudgetResult };
+  | { name: "evaluateBudget"; result: EvaluateBudgetResult }
+  | { name: "findMaxCredits"; result: FindMaxCreditsResult };
 
 type DisplayMessage = {
   id: string;
@@ -42,6 +44,12 @@ function isEvaluateBudgetResult(
   toolResult: { name: string; result: unknown } | null
 ): toolResult is { name: "evaluateBudget"; result: EvaluateBudgetResult } {
   return toolResult?.name === "evaluateBudget";
+}
+
+function isFindMaxCreditsResult(
+  toolResult: { name: string; result: unknown } | null
+): toolResult is { name: "findMaxCredits"; result: FindMaxCreditsResult } {
+  return toolResult?.name === "findMaxCredits";
 }
 
 // Shared between the desktop side panel and the mobile bottom-sheet overlay
@@ -144,7 +152,9 @@ export function ChatPanelContent({
           ? data.toolResult
           : isEvaluateBudgetResult(data.toolResult)
             ? data.toolResult
-            : undefined;
+            : isFindMaxCreditsResult(data.toolResult)
+              ? data.toolResult
+              : undefined;
 
       setMessages((current) => [
         ...current,
@@ -214,6 +224,9 @@ export function ChatPanelContent({
               )}
               {msg.toolResult?.name === "evaluateBudget" && (
                 <ChatBudgetComparison result={msg.toolResult.result} onApplyScenario={onSelectionsChange} />
+              )}
+              {msg.toolResult?.name === "findMaxCredits" && (
+                <ChatMaxCreditsCard result={msg.toolResult.result} onApply={onSelectionsChange} />
               )}
             </div>
           ))}

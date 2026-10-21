@@ -1,3 +1,4 @@
+import { resetSelectionsForSemesterChange, selectionsHaveProgress } from "@/lib/calculator/semesterSwitch";
 import type { RatesBundle, Selections } from "@/lib/calculator/types";
 import type { HousingImages } from "@/lib/content/housingImages";
 
@@ -81,23 +82,14 @@ export function writeStoredSelections(selections: DashboardSelections): void {
   }
 }
 
-// Switching to a semester of a different kind (fall/spring -> winter, or back) is "a whole
-// new thing", so everything resets except the two answers that mean the same in both:
-// education level and residency. Grants reset too -- they belong to the plan being left.
+// Switching to a semester of a different kind (fall/spring -> winter, or back) resets everything
+// except education level and residency -- see resetSelectionsForSemesterChange, which the AI
+// tools share. The dashboard adds `major`, which the calculator layer doesn't know about.
 export function resetForSemesterChange(selections: DashboardSelections, semester: DashboardSelections["semester"]): DashboardSelections {
-  return {
-    ...DEFAULT_SELECTIONS,
-    semester,
-    educationLevel: selections.educationLevel,
-    residency: selections.residency,
-  };
+  return { ...resetSelectionsForSemesterChange(selections, semester), major: DEFAULT_SELECTIONS.major };
 }
 
-// True when a semester switch would throw something away: any selection differs from what
-// the reset would leave behind. Education level and residency never count -- they survive.
+// True when a semester switch would throw something away (including a chosen major).
 export function hasProgressToLose(selections: DashboardSelections): boolean {
-  const afterReset = resetForSemesterChange(selections, selections.semester);
-  return (Object.keys(afterReset) as (keyof DashboardSelections)[]).some(
-    (key) => JSON.stringify(selections[key]) !== JSON.stringify(afterReset[key])
-  );
+  return selections.major !== DEFAULT_SELECTIONS.major || selectionsHaveProgress(selections);
 }

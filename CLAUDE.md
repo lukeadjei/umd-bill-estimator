@@ -39,7 +39,7 @@ Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, b
 - `src/app/` — Server Components read Supabase directly. Mutations are Server Actions (`dashboard/actions.ts`, `settings/actions.ts`). `dashboard/results` renders the printable bill using the same breakdown functions as the dashboard.
 - `src/components/dashboard/` — client-side selection state (`selections.ts`), `panels/` for each step, `results/` for the bill view. Dashboard selections persist in `sessionStorage`.
 - `scraper/` — one `fetch*Page.ts` per UMD source, then `writeToStaging.ts`, then `promoteStaging.ts`. `lambdaHandler.ts` is the scheduled entry point (EventBridge, monthly). New-year rollover: `academic-year:create` → `scrape` → review → `promote` → `academic-year:activate`.
-- AI chat limits: grants are deliberately not settable by the AI, and at most one tool call is handled per model turn.
+- AI chat limits: grants are deliberately not settable by the AI, and at most one tool call is handled per model turn. The assistant never switches a student's semester kind over an existing plan (`tools/patchGuards.ts`); cost tools (`evaluateBudget`, `findMaxCredits`) are the only source of dollar figures in replies.
 
 ## Critical rules — do not violate these
 

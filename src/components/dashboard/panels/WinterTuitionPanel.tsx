@@ -121,8 +121,9 @@ export function WinterTuitionPanel({ selections, onChange, spacious, rates, onOp
       </div>
 
       <PanelTip spacious={spacious}>
-        Winter tuition is UMD&apos;s published price for each credit count, so your estimate below updates as soon as
-        you pick your credits.
+        Winter tuition is UMD&apos;s published price for each credit count. This estimate doesn&apos;t include
+        course-specific lab, studio or materials fees, or program-specific Winter rates -- check Testudo for your
+        sections.
       </PanelTip>
     </div>
   );

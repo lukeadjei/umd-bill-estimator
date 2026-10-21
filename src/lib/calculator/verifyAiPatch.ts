@@ -1,6 +1,6 @@
-import { SELECTABLE_SEMESTERS } from "./constants";
 import { MAX_CREDIT_HOURS, MIN_CREDIT_HOURS } from "./constants";
-import type { RatesBundle, Selections } from "./types";
+import { availableSemesters, semesterPrices, type PricedCategory } from "./semesterConfig";
+import type { RatesBundle, Selections, Semester } from "./types";
 
 // Deliberately a hand-picked allowlist, not `Partial<Selections>` spread --
 // if a future field is ever added to Selections, it does NOT automatically
@@ -29,6 +29,7 @@ export type AiSelectionsPatch = {
   residentDiningPlan?: Selections["residentDiningPlan"];
   blockDiningPlan?: Selections["blockDiningPlan"];
   parking?: Selections["parking"];
+  winterClassFormat?: Selections["winterClassFormat"];
 };
 
 // A plain field-overwrite merge -- patch fields win where present, base
@@ -39,11 +40,37 @@ export function mergeSelectionsPatch(base: Selections, patch: AiSelectionsPatch)
   return { ...base, ...patch };
 }
 
-// Only semesters a user can pick today -- winter joins once its UI and AI support ship.
-const SEMESTER_VALUES = SELECTABLE_SEMESTERS;
+// The semesters offered depend on the year's data (Winter only when the year has winter rates), so
+// they're derived from the live RatesBundle per request -- same "one derivation, two consumers" rule
+// as every other enum below.
 const EDUCATION_LEVEL_VALUES = ["undergraduate", "graduate"] as const;
 const RESIDENCY_VALUES = ["resident", "non_resident"] as const;
 const LIVING_SITUATION_VALUES = ["on_campus", "commuter"] as const;
+const WINTER_CLASS_FORMAT_VALUES = ["in_person", "online_only"] as const;
+
+// Which priced categories each patch field matters for. A field applies to a semester when ANY of its
+// categories is priced there; a field with no entry (semester, education level, residency, credit
+// hours) applies everywhere. Lets the AI tools tell the model "Winter doesn't use housing" instead
+// of silently accepting a value that would be ignored.
+const FIELD_CATEGORIES: Partial<Record<keyof AiSelectionsPatch, readonly PricedCategory[]>> = {
+  appliesDifferentialTuition: ["differentialTuition"],
+  insurance: ["insurance"],
+  livingSituation: ["housing", "dining", "parking"],
+  housing: ["housing"],
+  residentDiningPlan: ["dining"],
+  blockDiningPlan: ["dining"],
+  parking: ["parking"],
+  winterClassFormat: ["winterFee"],
+};
+
+// The patch fields that have no effect in `semester` (e.g. housing in Winter, or the winter fee choice
+// in Fall). Empty when everything in the patch is relevant.
+export function inapplicablePatchFields(patch: AiSelectionsPatch, semester: Semester): (keyof AiSelectionsPatch)[] {
+  return (Object.keys(patch) as (keyof AiSelectionsPatch)[]).filter((field) => {
+    const categories = FIELD_CATEGORIES[field];
+    return categories !== undefined && !categories.some((category) => semesterPrices(semester, category));
+  });
+}
 
 function uniqueValues(values: string[]): string[] {
   return Array.from(new Set(values));
@@ -72,7 +99,12 @@ export function buildAiPatchToolSchema(rates: RatesBundle): object {
     description:
       "A partial patch of the student's selections, extracted from their message. Only include fields you're confident about -- omit anything unclear rather than guessing.",
     properties: {
-      semester: { type: "string", enum: SEMESTER_VALUES },
+      semester: {
+        type: "string",
+        enum: availableSemesters(rates),
+        description:
+          "Only set when the student clearly names a semester. Winter is a separate, simple bill (tuition plus one flat fee) -- see the system prompt.",
+      },
       educationLevel: { type: "string", enum: EDUCATION_LEVEL_VALUES },
       residency: { type: "string", enum: RESIDENCY_VALUES },
       creditHours: { type: "integer", minimum: MIN_CREDIT_HOURS, maximum: MAX_CREDIT_HOURS },
@@ -106,6 +138,12 @@ export function buildAiPatchToolSchema(rates: RatesBundle): object {
           term: { type: "string", enum: permitTerms },
         },
         required: ["permitType", "term"],
+      },
+      winterClassFormat: {
+        type: "string",
+        enum: WINTER_CLASS_FORMAT_VALUES,
+        description:
+          "Winter Session only. in_person if ANY of the student's classes meets on campus (even if the rest are online); online_only only if EVERY class is online/off-site. Never guess -- ask the student.",
       },
     },
     required: [],
@@ -157,6 +195,7 @@ export function verifyAiPatch(rawArgs: unknown, rates: RatesBundle): VerifyAiPat
     "residentDiningPlan",
     "blockDiningPlan",
     "parking",
+    "winterClassFormat",
   ]);
 
   for (const key of Object.keys(rawArgs)) {
@@ -166,8 +205,9 @@ export function verifyAiPatch(rawArgs: unknown, rates: RatesBundle): VerifyAiPat
   }
 
   if ("semester" in rawArgs) {
-    if (isOneOf(rawArgs.semester, SEMESTER_VALUES)) patch.semester = rawArgs.semester;
-    else errors.push(`semester must be one of: ${SEMESTER_VALUES.join(", ")}.`);
+    const semesterValues = availableSemesters(rates);
+    if (isOneOf(rawArgs.semester, semesterValues)) patch.semester = rawArgs.semester;
+    else errors.push(`semester must be one of: ${semesterValues.join(", ")}.`);
   }
 
   if ("educationLevel" in rawArgs) {
@@ -255,6 +295,11 @@ export function verifyAiPatch(rawArgs: unknown, rates: RatesBundle): VerifyAiPat
     } else {
       errors.push("parking requires both permitType and term as strings.");
     }
+  }
+
+  if ("winterClassFormat" in rawArgs) {
+    if (isOneOf(rawArgs.winterClassFormat, WINTER_CLASS_FORMAT_VALUES)) patch.winterClassFormat = rawArgs.winterClassFormat;
+    else errors.push(`winterClassFormat must be one of: ${WINTER_CLASS_FORMAT_VALUES.join(", ")}.`);
   }
 
   if (errors.length > 0) return { ok: false, errors };
