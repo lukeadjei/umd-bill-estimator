@@ -17,10 +17,11 @@ How the app is **currently built and configured**. This is a structure reference
 
 **Source of truth for columns/types: `src/lib/supabase/database.types.ts` (generated) and `supabase/migrations/`.** This section only records what those files don't make obvious. Both are verified against the live project at the start of every session (see CLAUDE.md "Session start").
 
-**Tables (25):**
-- `academic_years` — `label`, `is_current` (partial unique index: only one row can be current), plus `full_time_fee_credit_threshold` and `undergrad_tuition_full_time_credit_threshold` (the credit-hour cutoffs live in the DB, not in code)
+**Tables (31):**
+- `academic_years` — `label`, `is_current` (partial unique index: only one row can be current), plus `full_time_fee_credit_threshold` and `undergrad_tuition_full_time_credit_threshold` (the credit-hour cutoffs live in the DB, not in code), and `winter_max_credit_hours` (nullable; hand-set, **not** scraped/staged/promoted — null means no winter configured for that year)
 - Rate tables, each with an `academic_year_id` FK: `tuition_rates`, `mandatory_fees`, `differential_tuition`, `housing_rates`, `resident_dining_plans`, `block_dining_plans`, `parking_permits`, `graduate_tuition_rates`, `graduate_fees`, `health_insurance_rates`
-- `<table>_staging` twin for each of the 11 above (incl. `academic_years_staging`), each with `scraped_at`. Scrapes only ever write here.
+- Winter Session rates (per academic year): `winter_tuition_rates` (undergrad) and `winter_graduate_tuition_rates` (grad) — one row per (`residency`, `credit_hours`) holding the published **total price** for that many credits (not a per-credit rate; never multiply); `winter_fees` — one row with `campus_services_rate` and `distance_learning_rate`. Unique per year/residency/credit count.
+- `<table>_staging` twin for each rate table above (incl. `academic_years_staging` and the 3 winter tables), each with `scraped_at`. Scrapes only ever write here.
 - `scenarios` — a user's saved plan (rate-row ids, grants, note, `computed_total`)
 - `ai_parse_logs`, `ai_rate_limits` — AI chat logging and rate limiting
 - One custom function: `check_and_consume_ai_rate_limit` (atomic rate-limit check + increment)
@@ -47,6 +48,7 @@ How the app is **currently built and configured**. This is a structure reference
 - `validateSelections` — separate; handles always-required (tuition, credit hours) and conditionally-required (dining plan unless housing has a kitchen) fields.
 - Totals are recomputed from the full selection state on every change — never accumulated.
 - The AI never computes dollar amounts; `calculateTotal` is the only source of prices.
+- `RatesBundle.winter` holds the winter tuition/fee rows (null when the year has no usable winter data; built by `src/lib/supabase/buildWinterRates.ts`). `Selections.winterClassFormat` (`in_person` | `online_only` | null) picks the winter fee. Winter pricing/validation arrives in task 5 of v2.
 - `majors.ts` — `MAJORS` list and `DIFFERENTIAL_TUITION_MAJORS` (drives the differential-tuition warning).
 
 ---
@@ -101,15 +103,18 @@ One `fetch*Page.ts` per UMD source → `writeToStaging.ts` → `promoteStaging.t
 
 ```
 npm run scrape -- <academic_year_id>     # fetch UMD pages into *_staging
-npm run promote -- <academic_year_id>    # copy reviewed staging into live tables
+npm run promote -- <academic_year_id>    # copy reviewed staging into live tables (ALL rate tables)
+npm run promote -- <academic_year_id> winter   # winter tables only
 ```
-Both are idempotent (clear-before-write). `<academic_year_id>` is the UUID from `academic_years`.
+Both are idempotent (clear-before-write). `<academic_year_id>` is the UUID from `academic_years`. **Full `promote` delete-and-re-inserts every live rate table, which fails with a foreign-key error once any saved scenario references those rows** (`scenarios.tuition_rate_id` etc. have no cascade) — use `winter` for winter-only promotion; fixing full promote for an existing year is an open v2 backlog item. The winter promote also checks that the staged winter charts cover every credit count from 1 up to `academic_years.winter_max_credit_hours` before writing, and never touches that column.
+
+Scrape source group 7 is the winter page (`exst.umd.edu/.../winter-session/tuition-and-fees`, `fetchWinterSessionPage.ts`): reads credit counts from the table headers, fails loudly if either table or fee row is missing or the 1..N credit chart is incomplete.
 
 **New academic year rollover:** `npm run academic-year:create -- <label>` (not current) → `scrape` → review staging → `promote` → `npm run academic-year:activate -- <id>` (flips `is_current`, old year off first to respect the partial unique index).
 
 ### AWS Lambda automation (scrape-into-staging only)
 - **Lambda:** `umd-bill-estimator-scraper`, Node.js 20.x, handler `scraper/lambdaHandler.handler`, timeout 2 min, 256 MB, no VPC. Real runs ≈ 9.5 s / 149 MB.
-- **Build/deploy:** `npm run build:lambda` → zip `dist/lambda` (`Compress-Archive -Path dist\lambda\* -DestinationPath dist\lambda.zip` on Windows) → upload in the console.
+- **Build/deploy:** `tsconfig.lambda.json` defines the `@/*` → `src/*` path alias (the scraper imports constants from `src/lib/calculator`, which use it; without it the build fails). `npm run build:lambda` → zip `dist/lambda` with **forward-slash entry paths and no leading `./`** (e.g. a short Python `zipfile` script that writes `os.path.relpath(...).replace(os.sep, "/")`; Windows PowerShell 5.1 `Compress-Archive` writes backslash paths, which are fragile on Lambda's Linux side) → upload in the console (region us-east-2, function `umd-bill-estimator-scraper`).
 - **Secret:** Secrets Manager `umd-bill-estimator/supabase-service-role-key` (us-east-2) holds `{ SUPABASE_SERVICE_ROLE_KEY }`. `lambdaHandler.ts` fetches it, sets `process.env`, then dynamically `import()`s `supabaseClient.ts`/`runScrape.ts` so module-level env reads happen after the secret lands. Only `lambdaHandler.ts` is bundled by `tsconfig.lambda.json`; the CLI scripts are untouched.
 - **IAM:** `umd-bill-estimator-scraper-lambda-role` (trust: Lambda service; `AWSLambdaBasicExecutionRole` + inline `read-supabase-secret` scoped to that one secret ARN). EventBridge Scheduler's auto-generated role (trust: Scheduler; `lambda:InvokeFunction` scoped to this function).
 - **Schedule:** EventBridge Scheduler `umd-bill-estimator-monthly-scrape`, `cron(0 6 1 * ? *)` (06:00 UTC on the 1st), targeting the Lambda directly.

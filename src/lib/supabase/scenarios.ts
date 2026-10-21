@@ -125,6 +125,8 @@ function buildSelectionsFromScenarioRow(
     residentDiningPlan: residentPlanRow ? { planName: residentPlanRow.plan_name } : null,
     blockDiningPlan: blockPlanRow ? { planLabel: blockPlanRow.plan_label } : null,
     parking: parkingRow ? { permitType: parkingRow.permit_type, term: parkingRow.term } : null,
+    // Winter scenarios can't be saved yet (a later task adds the column); fall/spring have no winter fee choice.
+    winterClassFormat: null,
     grants: {
       pell: scenario.pell_grant_amount,
       terrapinCommitment: scenario.terrapin_commitment_amount,

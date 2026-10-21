@@ -211,6 +211,98 @@ async function promoteParkingPermits(academicYearId: string) {
   if (insertError) throw insertError;
 }
 
+// winter_max_credit_hours is deliberately NOT promoted (it is hand-set, never
+// staged -- see the migration comment). This only READS it, to make sure the
+// staged winter charts actually cover every credit count the app will allow:
+// otherwise a student picking the cap would hit a missing-rate lookup at
+// runtime. A null cap means winter isn't configured for the year, so there is
+// nothing to check against.
+async function assertWinterChartsCoverCap(
+  academicYearId: string,
+  charts: { name: string; rows: { residency: string; credit_hours: number }[] }[]
+) {
+  const { data: year, error } = await supabase
+    .from("academic_years")
+    .select("winter_max_credit_hours")
+    .eq("id", academicYearId)
+    .single();
+  if (error) throw error;
+  const cap = year.winter_max_credit_hours;
+  if (cap === null) return;
+
+  for (const chart of charts) {
+    for (const residency of ["resident", "non_resident"]) {
+      const have = new Set(chart.rows.filter((row) => row.residency === residency).map((row) => row.credit_hours));
+      for (let credits = 1; credits <= cap; credits++) {
+        if (!have.has(credits)) {
+          throw new Error(
+            `Staged ${chart.name} has no ${residency} price for ${credits} credit(s), but winter_max_credit_hours is ${cap}`
+          );
+        }
+      }
+    }
+  }
+}
+
+// Exported on its own so winter can be promoted without re-promoting the fall/spring
+// tables: promoteAllStaging deletes and re-inserts every live rate table, which the
+// foreign keys from saved scenarios (scenarios.tuition_rate_id etc.) refuse once any
+// scenario references those rows.
+export async function promoteWinterSession(academicYearId: string) {
+  const { data: undergrad, error: undergradFetchError } = await supabase
+    .from("winter_tuition_rates_staging")
+    .select("residency, credit_hours, price")
+    .eq("academic_year_id", academicYearId);
+  if (undergradFetchError) throw undergradFetchError;
+  const { data: graduate, error: graduateFetchError } = await supabase
+    .from("winter_graduate_tuition_rates_staging")
+    .select("residency, credit_hours, price")
+    .eq("academic_year_id", academicYearId);
+  if (graduateFetchError) throw graduateFetchError;
+  const { data: fees, error: feesFetchError } = await supabase
+    .from("winter_fees_staging")
+    .select("campus_services_rate, distance_learning_rate")
+    .eq("academic_year_id", academicYearId);
+  if (feesFetchError) throw feesFetchError;
+
+  if (!undergrad || undergrad.length === 0) throw new Error(`No staged winter_tuition_rates found for ${academicYearId}`);
+  if (!graduate || graduate.length === 0)
+    throw new Error(`No staged winter_graduate_tuition_rates found for ${academicYearId}`);
+  if (!fees || fees.length === 0) throw new Error(`No staged winter_fees found for ${academicYearId}`);
+
+  await assertWinterChartsCoverCap(academicYearId, [
+    { name: "winter_tuition_rates", rows: undergrad },
+    { name: "winter_graduate_tuition_rates", rows: graduate },
+  ]);
+
+  const { error: deleteUndergradError } = await supabase
+    .from("winter_tuition_rates")
+    .delete()
+    .eq("academic_year_id", academicYearId);
+  if (deleteUndergradError) throw deleteUndergradError;
+  const { error: insertUndergradError } = await supabase
+    .from("winter_tuition_rates")
+    .insert(undergrad.map((row) => ({ ...row, academic_year_id: academicYearId })));
+  if (insertUndergradError) throw insertUndergradError;
+
+  const { error: deleteGraduateError } = await supabase
+    .from("winter_graduate_tuition_rates")
+    .delete()
+    .eq("academic_year_id", academicYearId);
+  if (deleteGraduateError) throw deleteGraduateError;
+  const { error: insertGraduateError } = await supabase
+    .from("winter_graduate_tuition_rates")
+    .insert(graduate.map((row) => ({ ...row, academic_year_id: academicYearId })));
+  if (insertGraduateError) throw insertGraduateError;
+
+  const { error: deleteFeesError } = await supabase.from("winter_fees").delete().eq("academic_year_id", academicYearId);
+  if (deleteFeesError) throw deleteFeesError;
+  const { error: insertFeesError } = await supabase
+    .from("winter_fees")
+    .insert(fees.map((row) => ({ ...row, academic_year_id: academicYearId })));
+  if (insertFeesError) throw insertFeesError;
+}
+
 export async function promoteAllStaging(academicYearId: string) {
   await promoteAcademicYearThresholds(academicYearId);
   await promoteTuitionRates(academicYearId);
@@ -223,4 +315,5 @@ export async function promoteAllStaging(academicYearId: string) {
   await promoteResidentDiningPlans(academicYearId);
   await promoteBlockDiningPlans(academicYearId);
   await promoteParkingPermits(academicYearId);
+  await promoteWinterSession(academicYearId);
 }

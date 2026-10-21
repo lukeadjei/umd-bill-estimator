@@ -14,6 +14,9 @@ export type ResidentDiningPlanRow = Tables["resident_dining_plans"]["Row"];
 export type BlockDiningPlanRow = Tables["block_dining_plans"]["Row"];
 export type ParkingPermitRow = Tables["parking_permits"]["Row"];
 export type HealthInsuranceRateRow = Tables["health_insurance_rates"]["Row"];
+export type WinterTuitionRateRow = Tables["winter_tuition_rates"]["Row"];
+export type WinterGraduateTuitionRateRow = Tables["winter_graduate_tuition_rates"]["Row"];
+export type WinterFeeRow = Tables["winter_fees"]["Row"];
 
 // App-level labels -- the DB columns are plain text (residency) or don't exist at all
 // (education level is which table you query, not a stored value).
@@ -25,6 +28,12 @@ export type Semester = (typeof SEMESTERS)[number];
 // between "commuter" and "hasn't answered yet." validateSelections' job to
 // enforce housing is null for commuters and non-null for on_campus.
 export type LivingSituation = "on_campus" | "commuter";
+// Which flat Winter Session fee applies. Any in-person class -> the Winter
+// Campus Services Fee (even alongside online classes); only online/off-site
+// classes -> the Winter Distance Learning Fee. One choice, not two toggles:
+// "in person" and "all online" can't both be true, and the student (not the
+// app) picks since the app can't know which sections they'll take.
+export type WinterClassFormat = "in_person" | "online_only";
 
 // These hold identifiers only (what the user picked), not resolved prices --
 // the calculator functions match them against RatesBundle to find the price.
@@ -88,6 +97,9 @@ export type Selections = {
   residentDiningPlan: ResidentDiningSelection | null;
   blockDiningPlan: BlockDiningSelection | null;
   parking: ParkingSelection | null;
+  // Only used when semester is "winter" (see SEMESTER_CATEGORIES); null means
+  // "hasn't answered yet", same convention as the other nullable selections.
+  winterClassFormat: WinterClassFormat | null;
   grants: Grants;
 };
 
@@ -106,4 +118,18 @@ export type RatesBundle = {
   blockDiningPlans: BlockDiningPlanRow[];
   parkingPermits: ParkingPermitRow[];
   healthInsuranceRates: HealthInsuranceRateRow[];
+  // Winter Session rates for this academic year, or null when the year has no
+  // winter data configured (academic_years.winter_max_credit_hours is null, or
+  // the winter tables are empty) -- e.g. right after a rollover, before winter
+  // rates are published. `rates.winter !== null` is how the app knows Winter is
+  // available at all. Its credit cap is academicYear.winter_max_credit_hours.
+  winter: WinterRates | null;
+};
+
+export type WinterRates = {
+  // Each row is the published TOTAL price for that many credits, not a
+  // per-credit rate -- look one up by (residency, creditHours), never multiply.
+  undergraduateTuition: WinterTuitionRateRow[];
+  graduateTuition: WinterGraduateTuitionRateRow[];
+  fees: WinterFeeRow;
 };

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -46,6 +46,7 @@ export type Database = {
           is_current: boolean
           label: string
           undergrad_tuition_full_time_credit_threshold: number
+          winter_max_credit_hours: number | null
         }
         Insert: {
           full_time_fee_credit_threshold: number
@@ -53,6 +54,7 @@ export type Database = {
           is_current?: boolean
           label: string
           undergrad_tuition_full_time_credit_threshold: number
+          winter_max_credit_hours?: number | null
         }
         Update: {
           full_time_fee_credit_threshold?: number
@@ -60,6 +62,7 @@ export type Database = {
           is_current?: boolean
           label?: string
           undergrad_tuition_full_time_credit_threshold?: number
+          winter_max_credit_hours?: number | null
         }
         Relationships: []
       }
@@ -937,6 +940,201 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tuition_rates_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_fees: {
+        Row: {
+          academic_year_id: string
+          campus_services_rate: number
+          distance_learning_rate: number
+          id: string
+        }
+        Insert: {
+          academic_year_id: string
+          campus_services_rate: number
+          distance_learning_rate: number
+          id?: string
+        }
+        Update: {
+          academic_year_id?: string
+          campus_services_rate?: number
+          distance_learning_rate?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_fees_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: true
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_fees_staging: {
+        Row: {
+          academic_year_id: string
+          campus_services_rate: number
+          distance_learning_rate: number
+          id: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          campus_services_rate: number
+          distance_learning_rate: number
+          id?: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          campus_services_rate?: number
+          distance_learning_rate?: number
+          id?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_fees_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_graduate_tuition_rates: {
+        Row: {
+          academic_year_id: string
+          credit_hours: number
+          id: string
+          price: number
+          residency: string
+        }
+        Insert: {
+          academic_year_id: string
+          credit_hours: number
+          id?: string
+          price: number
+          residency: string
+        }
+        Update: {
+          academic_year_id?: string
+          credit_hours?: number
+          id?: string
+          price?: number
+          residency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_graduate_tuition_rates_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_graduate_tuition_rates_staging: {
+        Row: {
+          academic_year_id: string
+          credit_hours: number
+          id: string
+          price: number
+          residency: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          credit_hours: number
+          id?: string
+          price: number
+          residency: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          credit_hours?: number
+          id?: string
+          price?: number
+          residency?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_graduate_tuition_rates_staging_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_tuition_rates: {
+        Row: {
+          academic_year_id: string
+          credit_hours: number
+          id: string
+          price: number
+          residency: string
+        }
+        Insert: {
+          academic_year_id: string
+          credit_hours: number
+          id?: string
+          price: number
+          residency: string
+        }
+        Update: {
+          academic_year_id?: string
+          credit_hours?: number
+          id?: string
+          price?: number
+          residency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_tuition_rates_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winter_tuition_rates_staging: {
+        Row: {
+          academic_year_id: string
+          credit_hours: number
+          id: string
+          price: number
+          residency: string
+          scraped_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          credit_hours: number
+          id?: string
+          price: number
+          residency: string
+          scraped_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          credit_hours?: number
+          id?: string
+          price?: number
+          residency?: string
+          scraped_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winter_tuition_rates_staging_academic_year_id_fkey"
             columns: ["academic_year_id"]
             isOneToOne: false
             referencedRelation: "academic_years"

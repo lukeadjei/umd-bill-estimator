@@ -11,6 +11,7 @@ const rates: RatesBundle = {
     is_current: true,
     undergrad_tuition_full_time_credit_threshold: 12,
     full_time_fee_credit_threshold: 9,
+    winter_max_credit_hours: null,
   },
   tuitionRates: [
     { id: "t1", academic_year_id: "year-1", residency: "non_resident", full_time_rate: 20000, per_credit_rate: 1200 },
@@ -28,6 +29,7 @@ const rates: RatesBundle = {
   blockDiningPlans: [],
   parkingPermits: [],
   healthInsuranceRates: [{ id: "i1", academic_year_id: "year-1", fall_price: 1000, spring_price: 1000 }],
+  winter: null,
 };
 
 // A student with everything already answered, including dining (Traditional

@@ -6,6 +6,7 @@ import type { Selections } from "./types";
 // required), nothing else selected. Tests mutate from here.
 const baseOnCampus: Selections = {
   semester: "fall",
+  winterClassFormat: null,
   educationLevel: "undergraduate",
   residency: "resident",
   creditHours: 15,
@@ -59,6 +60,7 @@ describe("validateSelections -- credit hours", () => {
 describe("validateSelections -- required fields not yet answered", () => {
   const untouched: Selections = {
     semester: "fall",
+    winterClassFormat: null,
     educationLevel: null,
     residency: null,
     creditHours: null,
