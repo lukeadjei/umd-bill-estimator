@@ -76,6 +76,10 @@ export function AidPanel({ selections, onChange, spacious }: PanelProps) {
           Enter any grants or aid you&apos;re applying this semester -- these subtract from your total. Leave a field
           at $0 if it doesn&apos;t apply to you.
         </p>
+        <p className={`mt-2 text-foreground ${t.body}`}>
+          <span className="font-medium">Enter one semester&apos;s worth.</span> Aid is usually awarded for the whole
+          year and split between fall and spring, so a $3,000 Rawlings EA grant is $1,500 here.
+        </p>
       </div>
 
       <div className="flex flex-col gap-4">
