@@ -22,7 +22,7 @@ UMD Bill Estimator — a web app that estimates a University of Maryland student
 - AI: Claude or Gemini API via function calling, for natural-language input parsing
 
 ## Commands
-Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, build.
+Node 24 (`.nvmrc`; `engines` in `package.json`; CI reads `.nvmrc` too, so everything shares one npm major). CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, test, build. To sync a machine's `node_modules` use `npm ci`; use `npm install <pkg>` only to change dependencies, then review `git diff package-lock.json` — a plain `npm install` rewrites the lockfile and under a different npm than CI's can break `npm ci`.
 - `npm run dev` / `npm run build` / `npm run lint`
 - `npm test` (Vitest, run once) · `npm run test:watch` · single file: `npx vitest run src/lib/calculator/calculateTotal.test.ts` · single test: add `-t "name"`. Vitest and ESLint don't exclude `.claude/worktrees/`, so any worktree checkouts inflate test counts and lint output — remove them before trusting the numbers.
 - Scraper scripts load `.env.local` via `tsx --env-file`: `npm run scrape` (fills `_staging` tables), `npm run promote` (staging → live; manual, deliberately never automated), `npm run academic-year:create` / `academic-year:activate`
